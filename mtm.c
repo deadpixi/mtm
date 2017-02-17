@@ -226,12 +226,12 @@ focus(NODE *n)
         focus(n->c1? n->c1 : n->c2);
 }
 
-#define IN(n, y, x) (y >= n->y && y <= n->y + n->h && \
-                     x >= n->x && x <= n->x + n->w)
 #define ABOVE(n) n->y - 2, n->x + n->w / 2
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n)  n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
+#define IN(n, y, x) (y >= n->y && y <= n->y + n->h && \
+                     x >= n->x && x <= n->x + n->w)
 
 static NODE *
 findnode(NODE *n, int y, int x)
@@ -479,9 +479,8 @@ curseskeytokeystroke(int k)
         case KEY_PPAGE:     return TMT_KEY_PAGE_UP;
         case KEY_HOME:      return TMT_KEY_HOME;
         case KEY_END:       return TMT_KEY_END;
+        default:            return NULL;
     }
-
-    return NULL;
 }
 
 static void
@@ -542,8 +541,7 @@ tocolor(tmt_color_t c)
         case TMT_COLOR_MAGENTA: return COLOR_MAGENTA;
         case TMT_COLOR_CYAN:    return COLOR_CYAN;
         case TMT_COLOR_WHITE:   return COLOR_WHITE;
-        default:
-            return -1;
+        default:                return -1;
     }
 }
 
@@ -571,10 +569,10 @@ main(int argc, char **argv)
     int c = 0;
     while ((c = getopt(argc, argv, "mc:s:")) != -1){
         switch (c){
-            case 'm': monochrome = true;            break;
-            case 'c': commandkey = CTL(optarg[0]);  break;
-            case 's': shell = optarg;               break;
-            default:  quit(EXIT_FAILURE, USAGE);    break;
+            case 'm': monochrome = true;           break;
+            case 'c': commandkey = CTL(optarg[0]); break;
+            case 's': shell = optarg;              break;
+            default:  quit(EXIT_FAILURE, USAGE);   break;
         }
     }
 
@@ -590,7 +588,6 @@ main(int argc, char **argv)
 
     root = newview(NULL, 0, 0, LINES, COLS);
     focus(root);
-
     run();
 
     return quit(EXIT_SUCCESS, NULL);
