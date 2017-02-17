@@ -39,7 +39,7 @@
 
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
-#define USAGE "usage: mtm [-m] [-c KEY] [-s SHELL]"
+#define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY] [-s SHELL]"
 #define BUFMAX 100
 
 #ifdef __GNUC__
@@ -567,12 +567,13 @@ main(int argc, char **argv)
     shell = getshell();
 
     int c = 0;
-    while ((c = getopt(argc, argv, "mc:s:")) != -1){
+    while ((c = getopt(argc, argv, "mc:e:s:")) != -1){
         switch (c){
-            case 'm': monochrome = true;           break;
-            case 'c': commandkey = CTL(optarg[0]); break;
-            case 's': shell = optarg;              break;
-            default:  quit(EXIT_FAILURE, USAGE);   break;
+            case 'm': monochrome = true;                                break;
+            case 'c': commandkey = CTL(optarg[0]);                      break;
+            case 'e': ESCDELAY = atoi(optarg)? atoi(optarg) : ESCDELAY; break;
+            case 's': shell = optarg;                                   break;
+            default:  quit(EXIT_FAILURE, USAGE);                        break;
         }
     }
 
