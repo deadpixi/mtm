@@ -1,0 +1,110 @@
+.Dd $Mdocdate$
+.Dt MTM 1
+.Os
+.Sh NAME
+.Nm mtm
+.Nd a micro-terminal multiplexor
+.Sh SYNOPSIS
+.Nm
+.Op Fl m
+.Op Fl c Ar CHARACTER
+.Op Fl e Ar MILLISECONDS
+.Sh DESCRIPTION
+.Nm
+is a terminal multiplexor,
+a program that allows multiple terminal sessions to run within a single
+(physical or virtual)
+terminal session.
+.Nm
+emulates a collection of
+.Em mach
+or
+.Em mach-color
+terminals.
+.Pp
+The options are
+.Bl -tag -width Ds
+.It Fl m
+Run in
+.Dq monochrome
+mode; do not use color of any sort.
+.It Fl c Ar CHARACTER
+Commands are prefixed using
+.Ar CHARACTER ";"
+in combination with the
+.Dq control
+key;
+by default this is
+.Dq "g" "."
+.It Fl e Ar MILLISECONDS
+Wait up to
+.Ar MILLISECONDS
+after an escape character is input,
+to determine if it is the beginning of a special key sequence.
+By default,
+this is 1000
+.Pq "one second" "."
+.El
+.Pp
+.Nm
+divides the screen into multiple virtual terminals.
+Each virtual terminal is updated and accessed independently.
+At any given time,
+exactly one virtual terminal is
+.Dq focused ","
+meaning that it receives any typed characters.
+The currently-focused terminal is indicated by the location of the cursor.
+.Pp
+While running,
+the following keys are recognized as commands to
+.Nm
+when prefixed with the command character:
+.Bl -tag -width Ds
+.It Em "Up Arrow"
+Select the terminal above the currently focused one.
+.It Em "Down Arrow"
+Select the terminal below the currently focused one.
+.It Em "Right Arrow"
+Select the terminal to the right of the currently focused one.
+.It Em "Left Arrow"
+Select the terminal to the left of the currently focused one.
+.It Em "h"
+Split the focused terminal in half horizontally;
+the newly-created terminal will be focused.
+.It Em "v"
+Split the focused terminal in half vertically;
+the newly-created terminal will be focused.
+.It Em "w"
+Delete the currently focused terminal.
+.El
+.Sh ENVIRONMENT
+The following environment variables affect the operation of
+.Nm sam ":"
+.Bl -tag -width Ds
+.It Ev LC_CTYPE
+.It Ev LC_ALL
+.It Ev LANG
+These variables are consulted to determine the encoding used for textual data.
+.It SHELL
+If set,
+.Nm
+will launch the program named by this command in new virtual terminals.
+If this is unset,
+.Nm
+will use the value of the
+.Dq "command interpreter"
+field of the password database
+.Po
+see
+.Xr passwd 5
+.Pc
+if available,
+and will finally use
+.Pa "/bin/sh" "."
+.Sh SEE ALSO
+.Xr sh 1
+.Sh BUGS
+.Pp
+The only human language in which output from
+.Nm
+is generated is English.
