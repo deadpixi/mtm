@@ -71,7 +71,6 @@ static NODE *root;
 static NODE *focused;
 static bool monochrome;
 static bool needresize = true;
-static const char *shell;
 static int commandkey = CTL('g');
 
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -82,12 +81,10 @@ static void reshapechildren(NODE *n);
 static const char *
 getshell(void)
 {
-    if (getenv("SHELL"))
-        return getenv("SHELL");
+    if (getenv("SHELL")) return getenv("SHELL");
 
     struct passwd *pwd = getpwuid(getuid());
-    if (pwd)
-        return pwd->pw_shell;
+    if (pwd) return pwd->pw_shell;
 
     return "/bin/sh";
 }
@@ -95,12 +92,8 @@ getshell(void)
 static NODE *
 newnode(node_t t, NODE *p, int y, int x, int h, int w)
 {
-    if (h < 2 || w < 2)
-        return NULL;
-
     NODE *n = calloc(1, sizeof(NODE));
-    if (!n)
-        return NULL;
+    if (!n || h < 2 || w < 2) return free(n), NULL;
 
     n->t = t;
     n->pt = -1;
@@ -116,35 +109,23 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w)
 static void
 freenode(NODE *n, bool recurse)
 {
-    if (!n)
-        return;
-
-    if (n->pt >= 0)
-        close(n->pt);
-
-    if (n->win)
-        delwin(n->win);
-
-    if (n->vt)
-        tmt_close(n->vt);
-
-    if (recurse){
-        freenode(n->c1, true);
-        freenode(n->c2, true);
+    if (n){
+        if (n->pt >= 0) close(n->pt); 
+        if (n->win) delwin(n->win);
+        if (n->vt) tmt_close(n->vt); 
+        if (recurse) freenode(n->c1, true);
+        if (recurse) freenode(n->c2, true);
+        free(n);
     }
-
-    free(n);
 }
 
-static int
+static void
 quit(int rc, const char *m)
 {
-    if (m)
-        fprintf(stderr, "%s\n", m);
+    if (m) fprintf(stderr, "%s\n", m);
     freenode(root, true);
     endwin();
     exit(rc);
-    return rc; /* not reached */
 }
 
 static void
@@ -172,27 +153,22 @@ newview(NODE *p, int y, int x, int h, int w)
 {
     struct winsize ws = {.ws_row = h, .ws_col = w};
     NODE *n = newnode(VIEW, p, y, x, h, w);
-    if (!n)
-        return NULL;
+    if (!n) return NULL;
 
     n->win = newwin(h, w, y, x);
     keypad(n->win, TRUE);
-    if (!n->win)
-        return freenode(n, false), NULL;
+    if (!n->win) return freenode(n, false), NULL;
 
     n->vt = tmt_open(h, w, callback, n);
-    if (!n)
-        return freenode(n, false), NULL;
+    if (!n) return freenode(n, false), NULL;
 
     n->pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (n->pid < 0)
         return freenode(n, false), NULL;
     else if (n->pid == 0){
         setsid();
-        for (int fd = 3; fd < sysconf(_SC_OPEN_MAX); fd++)
-            close(fd);
         setenv("TERM", monochrome? "mach" : "mach-color", 1);
-        execl(shell, shell, NULL);
+        execl(getshell(), getshell(), NULL);
         return NULL;
     }
 
@@ -203,8 +179,7 @@ static NODE *
 newcontainer(node_t t, NODE *p, int y, int x, int h, int w, NODE *c1, NODE *c2)
 {
     NODE *n = newnode(t, p, y, x, h, w);
-    if (!n)
-        return NULL;
+    if (!n) return NULL;
 
     n->c1 = c1;
     n->c2 = c2;
@@ -237,14 +212,11 @@ static NODE *
 findnode(NODE *n, int y, int x)
 {
     if (IN(n, y, x)){
-        if (n->c1 && IN(n->c1, y, x))
-            return findnode(n->c1, y, x);
-        if (n->c2 && IN(n->c2, y, x))
-            return findnode(n->c2, y, x);
+        if (n->c1 && IN(n->c1, y, x)) return findnode(n->c1, y, x);
+        if (n->c2 && IN(n->c2, y, x)) return findnode(n->c2, y, x);
         return n;
-    }
-
-    return NULL;
+    } else
+        return NULL;
 }
 
 static void
@@ -261,7 +233,7 @@ replacechild(NODE *n, NODE *c1, NODE *c2)
     else if (n->c2 == c1)
         n->c2 = c2;
 
-    reshape(root, 0, 0, LINES, COLS); /* XXX - why root? Why not p? */
+    reshape(root, 0, 0, LINES, COLS); /* XXX - why root? Why not n? */
     draw(root, true);
 }
 
@@ -275,11 +247,8 @@ removechild(NODE *p, const NODE *c)
 static void
 deletenode(NODE *n)
 {
-    if (!n || !n->p)
-        quit(EXIT_SUCCESS, NULL);
-
-    if (n == focused)
-        focus(n->p->c1 == n? n->p->c2 : n->p->c1);
+    if (!n || !n->p) quit(EXIT_SUCCESS, NULL);
+    if (n == focused) focus(n->p->c1 == n? n->p->c2 : n->p->c1);
 
     removechild(n->p, n);
     freenode(n, true);
@@ -292,8 +261,7 @@ reshapeview(NODE *n, int y, int x, int h, int w)
     wresize(n->win, 1, 1);
     mvwin(n->win, y, x);
     wresize(n->win, h? h : 1, w? w : 1);
-    if (h >= 2 && w >= 2)
-        tmt_resize(n->vt, h, w);
+    if (h >= 2 && w >= 2) tmt_resize(n->vt, h, w);
     ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
@@ -346,8 +314,7 @@ buildcchar(TMTCHAR c)
 static void
 drawview(NODE *n, bool force)
 {
-    if (!n->vt)
-        return;
+    if (!n->vt) return;
 
     const TMTSCREEN *s = tmt_screen(n->vt);
     for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
@@ -384,8 +351,7 @@ split(NODE *n, node_t t)
 {
     NODE *p = n->p;
     NODE *v = newview(NULL, 0, 0, LINES, COLS);
-    if (!v)
-        return;
+    if (!v) return;
 
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
@@ -398,9 +364,8 @@ split(NODE *n, node_t t)
     draw(p? p : root, true);
 }
 
-typedef bool (*WALKCALLBACK)(NODE *n, void *p);
 static void
-walk(NODE *n, WALKCALLBACK c, void *p)
+walk(NODE *n, bool (*c)(NODE *n, void *p), void *p)
 {
     if (c(n, p)){
         if (n->c1) walk(n->c1, c, p);
@@ -411,8 +376,7 @@ walk(NODE *n, WALKCALLBACK c, void *p)
 static bool
 addfds(NODE *n, void *p)
 {
-    if (n->pt >= 0)
-        FD_SET(n->pt, (fd_set *)p);
+    if (n->pt >= 0) FD_SET(n->pt, (fd_set *)p);
     return true;
 }
 
@@ -422,8 +386,7 @@ getinput(NODE *n, void *p)
     if (n->pt >= 0 && FD_ISSET(n->pt, (fd_set *)p)){
         char buf[BUFMAX + 1] = {0};
         ssize_t r = read(n->pt, buf, BUFMAX);
-        if (r < 0)
-            return deletenode(n), false;
+        if (r < 0) return deletenode(n), false;
         tmt_writemb(n->vt, buf, r);
     }
 
@@ -435,15 +398,11 @@ handlechar(int k)
 {
     static bool ready = false;
 
-    if (k == commandkey)
-        return ready = !ready;
-
-    if (!ready)
-        return false;
+    if (k == commandkey) return ready = !ready;
+    if (!ready) return false;
 
     ready = false;
     switch (k){
-        case KEY_RESIZE: /* ignored */                          return true;
         case KEY_UP:     focus(findnode(root, ABOVE(focused))); return true;
         case KEY_DOWN:   focus(findnode(root, BELOW(focused))); return true;
         case KEY_LEFT:   focus(findnode(root, LEFT(focused)));  return true;
@@ -500,18 +459,15 @@ static void
 run(void)
 {
     while (root){
-        if (needresize)
-            handleresize();
+        if (needresize) handleresize();
 
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(STDIN_FILENO, &fds);
 
         walk(root, addfds, &fds);
-
         if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0){
-            if (errno == EINTR)
-                continue;
+            if (errno == EINTR) continue;
             quit(EXIT_FAILURE, strerror(errno));
         }
 
@@ -523,7 +479,6 @@ run(void)
         }
 
         walk(root, getinput, &fds);
-
         refresh();
         fixcursor();
     }
@@ -563,23 +518,20 @@ handlesigwinch(int sig UNUSED)
 int
 main(int argc, char **argv)
 {
-    setlocale(LC_ALL, "");
-    shell = getshell();
-
     int c = 0;
-    while ((c = getopt(argc, argv, "mc:e:s:")) != -1){
+
+    setlocale(LC_ALL, "");
+    while ((c = getopt(argc, argv, "mc:e:")) != -1){
         switch (c){
             case 'm': monochrome = true;                                break;
             case 'c': commandkey = CTL(optarg[0]);                      break;
             case 'e': ESCDELAY = atoi(optarg)? atoi(optarg) : ESCDELAY; break;
-            case 's': shell = optarg;                                   break;
             default:  quit(EXIT_FAILURE, USAGE);                        break;
         }
     }
 
     initscr();
     raw();
-    keypad(stdscr, TRUE);
     noecho();
     start_color();
     initcolors();
@@ -591,5 +543,6 @@ main(int argc, char **argv)
     focus(root);
     run();
 
-    return quit(EXIT_SUCCESS, NULL);
+    quit(EXIT_SUCCESS, NULL);
+    return EXIT_SUCCESS; /* not reached */
 }

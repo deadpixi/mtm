@@ -448,6 +448,7 @@ tmt_writemb(TMT *vt, const char *s, size_t n)
         if (nw >= BUF_MAX){
             tmt_write(vt, buf, nw);
             nw = 0;
+            wmemset(buf, 0, BUF_MAX + 1);
         }
     }
     tmt_write(vt, buf, nw);
