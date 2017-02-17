@@ -533,7 +533,7 @@ run(void)
 
         walk(root, addfds, &fds);
 
-        if (select(sysconf(_SC_OPEN_MAX), &fds, NULL, NULL, NULL) < 0){
+        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0){
             if (errno == EINTR)
                 continue;
             quit(EXIT_FAILURE, strerror(errno));
