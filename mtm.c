@@ -418,7 +418,7 @@ split(NODE *n, node_t t)
 
     replacechild(p, n, c);
     focus(v);
-    draw(root, true);
+    draw(p? p : root, true);
 }
 
 typedef bool (*WALKCALLBACK)(NODE *n, void *p);
