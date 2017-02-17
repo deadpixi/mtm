@@ -93,7 +93,7 @@ getshell(void)
 }
 
 static NODE *
-newnode(NODE *p, int y, int x, int h, int w)
+newnode(node_t t, NODE *p, int y, int x, int h, int w)
 {
     if (h < 2 || w < 2)
         return NULL;
@@ -102,6 +102,7 @@ newnode(NODE *p, int y, int x, int h, int w)
     if (!n)
         return NULL;
 
+    n->t = t;
     n->pt = -1;
     n->p = p;
     n->y = y;
@@ -157,7 +158,7 @@ fixcursor(void)
 }
 
 void
-callback(tmt_msg_t m, struct TMT *v, const void *r UNUSED, void *p)
+callback(tmt_msg_t m, struct TMT *v UNUSED, const void *r UNUSED, void *p)
 {
     switch (m){
         case TMT_MSG_BELL:   beep();                     break;
@@ -170,11 +171,10 @@ static NODE *
 newview(NODE *p, int y, int x, int h, int w)
 {
     struct winsize ws = {.ws_row = h, .ws_col = w};
-    NODE *n = newnode(p, y, x, h, w);
+    NODE *n = newnode(VIEW, p, y, x, h, w);
     if (!n)
         return NULL;
 
-    n->t = VIEW;
     n->win = newwin(h, w, y, x);
     keypad(n->win, TRUE);
     if (!n->win)
@@ -202,15 +202,13 @@ newview(NODE *p, int y, int x, int h, int w)
 static NODE *
 newcontainer(node_t t, NODE *p, int y, int x, int h, int w, NODE *c1, NODE *c2)
 {
-    NODE *n = newnode(p, y, x, h, w);
+    NODE *n = newnode(t, p, y, x, h, w);
     if (!n)
         return NULL;
 
-    n->t = t;
     n->c1 = c1;
     n->c2 = c2;
-    c1->p = n;
-    c2->p = n;
+    c1->p = c2->p = n;
 
     reshapechildren(n);
     return n;
@@ -221,20 +219,15 @@ focus(NODE *n)
 {
     if (!n)
         return;
-
-    if (n->t == VIEW){
+    else if (n->t == VIEW){
         focused = n;
         wrefresh(n->win);
     } else
         focus(n->c1? n->c1 : n->c2);
 }
 
-static bool
-encloses(const NODE *n, int y, int x)
-{
-    return y >= n->y && y <= n->y + n->h && x >= n->x && x <= n->x + n->w;
-}
-
+#define IN(n, y, x) (y >= n->y && y <= n->y + n->h && \
+                     x >= n->x && x <= n->x + n->w)
 #define ABOVE(n) n->y - 2, n->x + n->w / 2
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n)  n->y + n->h / 2, n->x - 2
@@ -243,10 +236,10 @@ encloses(const NODE *n, int y, int x)
 static NODE *
 findnode(NODE *n, int y, int x)
 {
-    if (encloses(n, y, x)){
-        if (n->c1 && encloses(n->c1, y, x))
+    if (IN(n, y, x)){
+        if (n->c1 && IN(n->c1, y, x))
             return findnode(n->c1, y, x);
-        if (n->c2 && encloses(n->c2, y, x))
+        if (n->c2 && IN(n->c2, y, x))
             return findnode(n->c2, y, x);
         return n;
     }
@@ -268,7 +261,7 @@ replacechild(NODE *n, NODE *c1, NODE *c2)
     else if (n->c2 == c1)
         n->c2 = c2;
 
-    reshape(root, 0, 0, LINES, COLS);
+    reshape(root, 0, 0, LINES, COLS); /* XXX - why root? Why not p? */
     draw(root, true);
 }
 
@@ -358,7 +351,6 @@ drawview(NODE *n, bool force)
 
     const TMTSCREEN *s = tmt_screen(n->vt);
     for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
-        touchline(n->win, r, 1);
         for (size_t c = 0; c < s->ncol; c++)
             mvwadd_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
     }
