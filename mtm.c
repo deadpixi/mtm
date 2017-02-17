@@ -324,10 +324,10 @@ reshapechildren(NODE *n)
 {
     if (n->t == HORIZONTAL){
         reshape(n->c1, n->y, n->x, n->h, n->w / 2);
-        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2);
+        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - 1);
     } else if (n->t == VERTICAL){
         reshape(n->c1, n->y, n->x, n->h / 2, n->w);
-        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2, n->w);
+        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - 1, n->w);
     }
 }
 
