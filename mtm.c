@@ -54,13 +54,6 @@ typedef enum{
     VIEW
 } node_t;
 
-typedef enum{
-    ABOVE,
-    BELOW,
-    LEFT,
-    RIGHT
-} direction_t;
-
 typedef struct NODE NODE;
 struct NODE{
     node_t t;
@@ -242,6 +235,11 @@ encloses(const NODE *n, int y, int x)
     return y >= n->y && y <= n->y + n->h && x >= n->x && x <= n->x + n->w;
 }
 
+#define ABOVE(n) n->y - 2, n->x + n->w / 2
+#define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
+#define LEFT(n)  n->y + n->h / 2, n->x - 2
+#define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
+
 static NODE *
 findnode(NODE *n, int y, int x)
 {
@@ -251,19 +249,6 @@ findnode(NODE *n, int y, int x)
         if (n->c2 && encloses(n->c2, y, x))
             return findnode(n->c2, y, x);
         return n;
-    }
-
-    return NULL;
-}
-
-static NODE *
-findneighbor(NODE *n, direction_t d)
-{
-    switch (d){
-        case ABOVE: return findnode(root, n->y - 2, n->x + n->w / 2);
-        case BELOW: return findnode(root, n->y + n->h + 2, n->x + n->w / 2);
-        case LEFT:  return findnode(root, n->y + n->h / 2, n->x - 2);
-        case RIGHT: return findnode(root, n->y + n->h / 2, n->x + n->w + 2);
     }
 
     return NULL;
@@ -466,14 +451,14 @@ handlechar(int k)
 
     ready = false;
     switch (k){
-        case KEY_RESIZE: /* ignored */                        return true;
-        case KEY_UP:     focus(findneighbor(focused, ABOVE)); return true;
-        case KEY_DOWN:   focus(findneighbor(focused, BELOW)); return true;
-        case KEY_RIGHT:  focus(findneighbor(focused, RIGHT)); return true;
-        case KEY_LEFT:   focus(findneighbor(focused, LEFT));  return true;
-        case 'h':        split(focused, HORIZONTAL);          return true;
-        case 'v':        split(focused, VERTICAL);            return true;
-        case 'w':        deletenode(focused);                 return true;
+        case KEY_RESIZE: /* ignored */                          return true;
+        case KEY_UP:     focus(findnode(root, ABOVE(focused))); return true;
+        case KEY_DOWN:   focus(findnode(root, BELOW(focused))); return true;
+        case KEY_LEFT:   focus(findnode(root, LEFT(focused)));  return true;
+        case KEY_RIGHT:  focus(findnode(root, RIGHT(focused))); return true;
+        case 'h':        split(focused, HORIZONTAL);            return true;
+        case 'v':        split(focused, VERTICAL);              return true;
+        case 'w':        deletenode(focused);                   return true;
     }
 
     return false;
