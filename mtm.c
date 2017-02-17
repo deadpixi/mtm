@@ -141,11 +141,8 @@ fixcursor(void)
 void
 callback(tmt_msg_t m, struct TMT *v UNUSED, const void *r UNUSED, void *p)
 {
-    switch (m){
-        case TMT_MSG_BELL:   beep();                     break;
-        case TMT_MSG_MOVED:  fixcursor();                break;
-        case TMT_MSG_UPDATE: drawview((NODE *)p, false); break;
-    }
+    if (m == TMT_MSG_BELL) beep();
+    if (m == TMT_MSG_UPDATE) drawview((NODE *)p, false);
 }
 
 static NODE *
@@ -233,8 +230,9 @@ replacechild(NODE *n, NODE *c1, NODE *c2)
     else if (n->c2 == c1)
         n->c2 = c2;
 
-    reshape(root, 0, 0, LINES, COLS); /* XXX - why root? Why not n? */
-    draw(root, true);
+    n = n? n : root;
+    reshape(n, n->y, n->x, n->h, n->w);
+    draw(n, true);
 }
 
 static void
@@ -396,23 +394,22 @@ getinput(NODE *n, void *p)
 static bool
 handlechar(int k)
 {
-    static bool ready = false;
+    static bool cmd = false;
 
-    if (k == commandkey) return ready = !ready;
-    if (!ready) return false;
+    if (k == commandkey) return cmd = !cmd;
+    if (!cmd) return false;
 
-    ready = false;
     switch (k){
-        case KEY_UP:     focus(findnode(root, ABOVE(focused))); return true;
-        case KEY_DOWN:   focus(findnode(root, BELOW(focused))); return true;
-        case KEY_LEFT:   focus(findnode(root, LEFT(focused)));  return true;
-        case KEY_RIGHT:  focus(findnode(root, RIGHT(focused))); return true;
-        case 'h':        split(focused, HORIZONTAL);            return true;
-        case 'v':        split(focused, VERTICAL);              return true;
-        case 'w':        deletenode(focused);                   return true;
+        case KEY_UP:     focus(findnode(root, ABOVE(focused)));   return true;
+        case KEY_DOWN:   focus(findnode(root, BELOW(focused)));   return true;
+        case KEY_LEFT:   focus(findnode(root, LEFT(focused)));    return true;
+        case KEY_RIGHT:  focus(findnode(root, RIGHT(focused)));   return true;
+        case 'h':        split(focused, HORIZONTAL); cmd = false; return true;
+        case 'v':        split(focused, VERTICAL); cmd = false;   return true;
+        case 'w':        deletenode(focused); cmd = false;        return true;
     }
 
-    return false;
+    return cmd = false;
 }
 
 static const char *
