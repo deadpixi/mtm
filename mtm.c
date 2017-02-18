@@ -400,6 +400,7 @@ handlechar(int k)
     if (!cmd) return false;
 
     #define C(c) case c : case CTL(c)
+    cmd = false;
     switch (k){
         case KEY_UP:     focus(findnode(root, ABOVE(focused))); return true;
         case KEY_DOWN:   focus(findnode(root, BELOW(focused))); return true;
@@ -410,9 +411,8 @@ handlechar(int k)
         C('w'):          deletenode(focused);                   return true;
         C('l'):          draw(root, true);                      return true;
     }
-    cmd = false;
 
-    return cmd = false;
+    return false;
 }
 
 static const char *
