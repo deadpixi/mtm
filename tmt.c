@@ -421,7 +421,7 @@ static inline size_t
 testmbchar(TMT *vt)
 {
     mbstate_t ts = vt->ms;
-    return mbrtowc(NULL, vt->mb, vt->nmb, &ts);
+    return vt->nmb? mbrtowc(NULL, vt->mb, vt->nmb, &ts) : (size_t)-2;
 }
 
 static inline void
