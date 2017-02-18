@@ -25,9 +25,8 @@ terminals.
 The options are
 .Bl -tag -width Ds
 .It Fl m
-Run in
-.Dq monochrome
-mode; do not use color of any sort.
+Run in monochrome mode;
+do not use color of any sort.
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER ";"
@@ -76,7 +75,12 @@ Split the focused terminal in half vertically;
 the newly-created terminal will be focused.
 .It Em "w"
 Delete the currently focused terminal.
+.It Em "l"
+Redraw the screen.
 .El
+.Pp
+.Nm
+will exit when its last virtual terminal is closed.
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm sam ":"
@@ -104,6 +108,11 @@ and will finally use
 .Sh SEE ALSO
 .Xr sh 1
 .Sh BUGS
+.Pp
+.Nm
+will attempt to fit all virtual terminals in the window at once.
+If many terminals are created and the containing window is shrunk too small,
+the display will be suboptimal.
 .Pp
 The only human language in which output from
 .Nm

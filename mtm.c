@@ -39,7 +39,7 @@
 
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
-#define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY] [-s SHELL]"
+#define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
 #define BUFMAX 100
 
 #ifdef __GNUC__
@@ -399,14 +399,16 @@ handlechar(int k)
     if (k == commandkey) return cmd = !cmd;
     if (!cmd) return false;
 
+    #define C(c) case c : case CTL(c)
     switch (k){
         case KEY_UP:     focus(findnode(root, ABOVE(focused)));   return true;
         case KEY_DOWN:   focus(findnode(root, BELOW(focused)));   return true;
         case KEY_LEFT:   focus(findnode(root, LEFT(focused)));    return true;
         case KEY_RIGHT:  focus(findnode(root, RIGHT(focused)));   return true;
-        case 'h':        split(focused, HORIZONTAL); cmd = false; return true;
-        case 'v':        split(focused, VERTICAL); cmd = false;   return true;
-        case 'w':        deletenode(focused); cmd = false;        return true;
+        C('h'):          split(focused, HORIZONTAL); cmd = false; return true;
+        C('v'):          split(focused, VERTICAL); cmd = false;   return true;
+        C('w'):          deletenode(focused); cmd = false;        return true;
+        C('l'):          draw(root, true);                        return true;
     }
 
     return cmd = false;
