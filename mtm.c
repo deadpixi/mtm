@@ -393,8 +393,7 @@ getinput(NODE *n, void *p)
     if (n->pt >= 0 && FD_ISSET(n->pt, (fd_set *)p)){
         char buf[BUFMAX + 1] = {0};
         ssize_t r = read(n->pt, buf, BUFMAX);
-        if (r < 0)
-            return errno == EINTR? true : (deletenode(n), false);
+        if (r < 0) return errno == EINTR? true : (deletenode(n), false);
         tmt_writemb(n->vt, buf, r);
     }
 
