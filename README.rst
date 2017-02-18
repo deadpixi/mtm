@@ -19,9 +19,6 @@ Rob posts updates about mtm on Twitter at http://twitter.com/TheKingAdRob.
 
 Installation
 ============
-
-Basic Installation
--------------------
 Installation and configuration is fairly simple:
 
 - You need ncursesw.
