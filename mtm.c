@@ -440,6 +440,7 @@ handlechar(int k, int pt)
 
     return cmd = false;
 }
+
 static void
 handleresize(void)
 {
