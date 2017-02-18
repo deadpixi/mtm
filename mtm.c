@@ -40,7 +40,7 @@
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
 #define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
-#define BUFMAX 100
+#define BUFMAX 1000
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
@@ -529,14 +529,15 @@ main(int argc, char **argv)
         }
     }
 
+    struct sigaction sa = {.sa_handler = handlesigwinch, 0};
+    sigaction(SIGWINCH, &sa, NULL);
+
     initscr();
     raw();
     noecho();
     start_color();
     initcolors();
 
-    struct sigaction sa = {.sa_handler = handlesigwinch, 0};
-    sigaction(SIGWINCH, &sa, NULL);
 
     root = newview(NULL, 0, 0, LINES, COLS);
     focus(root);
