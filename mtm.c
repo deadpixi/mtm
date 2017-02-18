@@ -67,10 +67,8 @@ struct NODE{
     pid_t pid;
 };
 
-static NODE *root;
-static NODE *focused;
-static bool monochrome;
-static bool needresize = true;
+static NODE *root, *focused;
+static bool monochrome, needresize = true;
 static int commandkey = CTL('g');
 
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -136,7 +134,7 @@ safewrite(int fd, const char *b, size_t n)
         ssize_t s = write(fd, b + w, n - w);
         if (s < 0 && errno != EINTR)
             quit(EXIT_FAILURE, strerror(errno));
-        w += s;
+        w += (size_t)s;
     }
 }
 
