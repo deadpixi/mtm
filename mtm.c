@@ -307,7 +307,6 @@ buildcchar(TMTCHAR c)
     static cchar_t r;
     attr_t a = A_NORMAL;
     wchar_t s[] = {c.c, 0};
-    memset(&r, 0, sizeof(r));
 
     if (c.a.dim)       a |= A_DIM;
     if (c.a.invisible) a |= A_INVIS;
@@ -403,57 +402,45 @@ getinput(NODE *n, void *p)
 }
 
 static bool
-handlechar(int k)
+handlechar(int k, int pt)
 {
     static bool cmd = false;
+    #define WRITESTR(s) safewrite(pt, s, strlen(s))
+    #define DO(s, i, a) if (s == cmd && i == k)\
+        { a ; cmd = false; return true;}
 
-    if (k == commandkey) return cmd = !cmd;
-    if (!cmd) return false;
+    DO(false, '\n',          WRITESTR("\r"))
+    DO(false, KEY_DOWN,      WRITESTR(TMT_KEY_DOWN))
+    DO(false, KEY_UP,        WRITESTR(TMT_KEY_UP))
+    DO(false, KEY_LEFT,      WRITESTR(TMT_KEY_LEFT))
+    DO(false, KEY_RIGHT,     WRITESTR(TMT_KEY_RIGHT))
+    DO(false, KEY_BACKSPACE, WRITESTR(TMT_KEY_BACKSPACE))
+    DO(false, KEY_F(1),      WRITESTR(TMT_KEY_F1))
+    DO(false, KEY_F(2),      WRITESTR(TMT_KEY_F2))
+    DO(false, KEY_F(3),      WRITESTR(TMT_KEY_F3))
+    DO(false, KEY_F(4),      WRITESTR(TMT_KEY_F4))
+    DO(false, KEY_F(5),      WRITESTR(TMT_KEY_F5))
+    DO(false, KEY_F(6),      WRITESTR(TMT_KEY_F6))
+    DO(false, KEY_F(7),      WRITESTR(TMT_KEY_F7))
+    DO(false, KEY_F(8),      WRITESTR(TMT_KEY_F8))
+    DO(false, KEY_F(9),      WRITESTR(TMT_KEY_F9))
+    DO(false, KEY_F(10),     WRITESTR(TMT_KEY_F10))
+    DO(false, KEY_NPAGE,     WRITESTR(TMT_KEY_PAGE_DOWN))
+    DO(false, KEY_PPAGE,     WRITESTR(TMT_KEY_PAGE_UP))
+    DO(false, KEY_HOME,      WRITESTR(TMT_KEY_HOME))
+    DO(false, KEY_END,       WRITESTR(TMT_KEY_END))
+    DO(cmd,   commandkey,    return cmd = !cmd)
+    DO(true,  KEY_UP,        focus(findnode(root, ABOVE(focused))))
+    DO(true,  KEY_DOWN,      focus(findnode(root, BELOW(focused))))
+    DO(true,  KEY_LEFT,      focus(findnode(root, LEFT(focused))))
+    DO(true,  KEY_RIGHT,     focus(findnode(root, RIGHT(focused))))
+    DO(true,  'h',           split(focused, HORIZONTAL))
+    DO(true,  'v',           split(focused, VERTICAL))
+    DO(true,  'w',           deletenode(focused))
+    DO(true,  'l',           draw(root, true))
 
-    #define C(c) case c : case CTL(c)
-    cmd = false;
-    switch (k){
-        case KEY_UP:    focus(findnode(root, ABOVE(focused))); return true;
-        case KEY_DOWN:  focus(findnode(root, BELOW(focused))); return true;
-        case KEY_LEFT:  focus(findnode(root, LEFT(focused)));  return true;
-        case KEY_RIGHT: focus(findnode(root, RIGHT(focused))); return true;
-        C('h'):         split(focused, HORIZONTAL);            return true;
-        C('v'):         split(focused, VERTICAL);              return true;
-        C('w'):         deletenode(focused);                   return true;
-        C('l'):         draw(root, true);                      return true;
-    }
-
-    return false;
+    return cmd = false;
 }
-
-static const char *
-curseskeytokeystroke(int k)
-{
-    switch (k){
-        case '\n':          return "\r";
-        case KEY_DOWN:      return TMT_KEY_DOWN;
-        case KEY_UP:        return TMT_KEY_UP;
-        case KEY_LEFT:      return TMT_KEY_LEFT;
-        case KEY_RIGHT:     return TMT_KEY_RIGHT;
-        case KEY_BACKSPACE: return TMT_KEY_BACKSPACE;
-        case KEY_F(1):      return TMT_KEY_F1;
-        case KEY_F(2):      return TMT_KEY_F2;
-        case KEY_F(3):      return TMT_KEY_F3;
-        case KEY_F(4):      return TMT_KEY_F4;
-        case KEY_F(5):      return TMT_KEY_F5;
-        case KEY_F(6):      return TMT_KEY_F6;
-        case KEY_F(7):      return TMT_KEY_F7;
-        case KEY_F(8):      return TMT_KEY_F8;
-        case KEY_F(9):      return TMT_KEY_F9;
-        case KEY_F(10):     return TMT_KEY_F10;
-        case KEY_NPAGE:     return TMT_KEY_PAGE_DOWN;
-        case KEY_PPAGE:     return TMT_KEY_PAGE_UP;
-        case KEY_HOME:      return TMT_KEY_HOME;
-        case KEY_END:       return TMT_KEY_END;
-        default:            return NULL;
-    }
-}
-
 static void
 handleresize(void)
 {
@@ -485,9 +472,8 @@ run(void)
 
         if (FD_ISSET(STDIN_FILENO, &fds)){
             int c = wgetch(focused->win);
-            const char *k = curseskeytokeystroke(c);
-            if (!handlechar(c))
-                safewrite(focused->pt, k? k : (char *)&c, k? strlen(k) : 1);
+            if (!handlechar(c, focused->pt))
+                safewrite(focused->pt, (char *)&c, 1);
         }
 
         walk(root, getinput, &fds);
