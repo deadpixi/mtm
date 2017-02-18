@@ -1,7 +1,7 @@
 Introduction
 ============
 
-mtm is the Micro Terminal Multiplexer, a terminal multiplexor in 550 lines
+mtm is the Micro Terminal Multiplexer, a terminal multiplexer in 550 lines
 (or 1050 lines if you count `tmt.c`_, the terminal emulator component that
 is available separately).
 
