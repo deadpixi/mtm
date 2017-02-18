@@ -10,7 +10,7 @@ is available separately).
 The Obiligatory Screenshot
 --------------------------
 
-.. image:: mtm.png
+.. image:: screenshot.png
 
 Community
 =========
