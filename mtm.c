@@ -402,14 +402,14 @@ handlechar(int k)
     #define C(c) case c : case CTL(c)
     cmd = false;
     switch (k){
-        case KEY_UP:     focus(findnode(root, ABOVE(focused))); return true;
-        case KEY_DOWN:   focus(findnode(root, BELOW(focused))); return true;
-        case KEY_LEFT:   focus(findnode(root, LEFT(focused)));  return true;
-        case KEY_RIGHT:  focus(findnode(root, RIGHT(focused))); return true;
-        C('h'):          split(focused, HORIZONTAL);            return true;
-        C('v'):          split(focused, VERTICAL);              return true;
-        C('w'):          deletenode(focused);                   return true;
-        C('l'):          draw(root, true);                      return true;
+        case KEY_UP:    focus(findnode(root, ABOVE(focused))); return true;
+        case KEY_DOWN:  focus(findnode(root, BELOW(focused))); return true;
+        case KEY_LEFT:  focus(findnode(root, LEFT(focused)));  return true;
+        case KEY_RIGHT: focus(findnode(root, RIGHT(focused))); return true;
+        C('h'):         split(focused, HORIZONTAL);            return true;
+        C('v'):         split(focused, VERTICAL);              return true;
+        C('w'):         deletenode(focused);                   return true;
+        C('l'):         draw(root, true);                      return true;
     }
 
     return false;
