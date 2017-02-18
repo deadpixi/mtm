@@ -19,7 +19,7 @@ Size
     If you include the terminal emulation layer (which is `available
     separately`_ as a library), the total number of lines doesn't break 1050.
 
-.. _`tmt.c`: https://github.com/deadpixi/libtmt
+.. _`available separately`: https://github.com/deadpixi/libtmt
 
 The Obiligatory Screenshot
 --------------------------
