@@ -1,9 +1,23 @@
 Introduction
 ============
 
-mtm is the Micro Terminal Multiplexer, a terminal multiplexer in 550 lines
-(or 1050 lines if you count `tmt.c`_, the terminal emulator component that
-is available separately).
+mtm is the Micro Terminal Multiplexer, a terminal multiplexer.
+
+It has three major features/princples:
+
+Simplicity
+    There are three commands (change focus, split, close).  There are no
+    modes, no dozens of commands, no crazy feature list.
+
+Compatibility
+    mtm emulates an existing, well-known terminal type.  That means it
+    should work out of the box on essentially all termcap-based systems,
+    even pretty old ones, without needing to install a new termcap entry.
+
+Size
+    mtm is less than 550 lines of C, including whitespace and comments.
+    If you include the terminal emulation layer (which is `available
+    separately`_ as a library), the total number of lines doesn't break 1050.
 
 .. _`tmt.c`: https://github.com/deadpixi/libtmt
 
@@ -85,7 +99,7 @@ Up/Down/Left/Right Arrow
     the currently focused terminal.
 
 h / v
-    Split the focused virtual terminal in half horizontally/vertically.
+    Split the focused virtual terminal in half horizontally/vertically,
     creating a new virtual terminal to the right/below.  The new virtual
     terminal is focused.
 
