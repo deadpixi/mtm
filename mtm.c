@@ -29,10 +29,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifndef NCURSESW_INCLUDE_H
-#define NCURSESW_INCLUDE_H <ncursesw/curses.h>
-#endif
-
 #include NCURSESW_INCLUDE_H
 
 #include "tmt.h"
