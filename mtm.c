@@ -419,6 +419,7 @@ static const char *
 curseskeytokeystroke(int k)
 {
     switch (k){
+        case '\n':          return "\r";
         case KEY_DOWN:      return TMT_KEY_DOWN;
         case KEY_UP:        return TMT_KEY_UP;
         case KEY_LEFT:      return TMT_KEY_LEFT;
