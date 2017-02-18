@@ -1,9 +1,9 @@
 
-CC      ?= c99
-CFLAGS  ?= -O3
-HEADERS ?= -DNCURSESW_INCLUDE_H="<ncursesw/curses.h>"
-LIBPATH ?=
-DESTDIR ?= /usr/local
+CC      := c99
+CFLAGS  := -O3
+HEADERS := -DNCURSESW_INCLUDE_H="<ncursesw/curses.h>"
+LIBPATH :=
+DESTDIR := /usr/local
 
 all: mtm
 
