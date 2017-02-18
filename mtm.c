@@ -147,8 +147,11 @@ fixcursor(void)
 void
 callback(tmt_msg_t m, struct TMT *v UNUSED, const void *r UNUSED, void *p)
 {
-    if (m == TMT_MSG_BELL) beep();
-    if (m == TMT_MSG_UPDATE) drawview((NODE *)p, false);
+    switch (m){
+        case TMT_MSG_UPDATE: drawview((NODE *)p, false); break;
+        case TMT_MSG_MOVED:  fixcursor();                break;
+        case TMT_MSG_BELL:   beep();                     break;
+    }
 }
 
 static NODE *
