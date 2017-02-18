@@ -129,6 +129,18 @@ quit(int rc, const char *m)
 }
 
 static void
+safewrite(int fd, const char *b, size_t n)
+{
+    size_t w = 0;
+    while (w < n){
+        ssize_t s = write(fd, b + w, n - w);
+        if (s < 0 && errno != EINTR)
+            quit(EXIT_FAILURE, strerror(errno));
+        w += s;
+    }
+}
+
+static void
 fixcursor(void)
 {
     if (focused){
@@ -294,9 +306,10 @@ reshape(NODE *n, int y, int x, int h, int w)
 static cchar_t *
 buildcchar(TMTCHAR c)
 {
-    static cchar_t r = {0};
+    static cchar_t r;
     attr_t a = A_NORMAL;
     wchar_t s[] = {c.c, 0};
+    memset(&r, 0, sizeof(r));
 
     if (c.a.dim)       a |= A_DIM;
     if (c.a.invisible) a |= A_INVIS;
@@ -446,7 +459,7 @@ curseskeytokeystroke(int k)
 static void
 handleresize(void)
 {
-    struct winsize ws = {0};
+    struct winsize ws;
     ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
     resize_term(ws.ws_row, ws.ws_col);
     reshape(root, 0, 0, LINES, COLS);
@@ -476,7 +489,7 @@ run(void)
             int c = wgetch(focused->win);
             const char *k = curseskeytokeystroke(c);
             if (!handlechar(c))
-                write(focused->pt, k? k : (char *)&c, k? strlen(k) : 1);
+                safewrite(focused->pt, k? k : (char *)&c, k? strlen(k) : 1);
         }
 
         walk(root, getinput, &fds);
@@ -531,7 +544,9 @@ main(int argc, char **argv)
         }
     }
 
-    struct sigaction sa = {.sa_handler = handlesigwinch, 0};
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handlesigwinch;
     sigaction(SIGWINCH, &sa, NULL);
 
     initscr();
