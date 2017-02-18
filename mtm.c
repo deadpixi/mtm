@@ -540,7 +540,6 @@ main(int argc, char **argv)
     start_color();
     initcolors();
 
-
     root = newview(NULL, 0, 0, LINES, COLS);
     focus(root);
     run();
