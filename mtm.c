@@ -132,8 +132,7 @@ safewrite(int fd, const char *b, size_t n)
     size_t w = 0;
     while (w < n){
         ssize_t s = write(fd, b + w, n - w);
-        if (s < 0 && errno != EINTR)
-            quit(EXIT_FAILURE, strerror(errno));
+        if (s < 0 && errno != EINTR) return;
         w += (size_t)s;
     }
 }
