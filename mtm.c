@@ -453,8 +453,7 @@ run(void)
         FD_SET(STDIN_FILENO, &fds);
 
         walk(root, addfds, &fds);
-        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0)
-            FD_ZERO(&fds);
+        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0) FD_ZERO(&fds);
 
         int c;
         while ((c = wgetch(focused->win)) != ERR) if (!handlechar(c))
