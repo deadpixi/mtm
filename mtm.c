@@ -308,12 +308,11 @@ buildcchar(TMTCHAR c)
     attr_t a = A_NORMAL;
     wchar_t s[] = {c.c, 0};
 
-    if (c.a.dim)       a |= A_DIM;
-    if (c.a.invisible) a |= A_INVIS;
-    if (c.a.bold)      a |= A_BOLD;
-    if (c.a.underline) a |= A_UNDERLINE;
-    if (c.a.blink)     a |= A_BOLD; /* nobody likes blinking */
-    if (c.a.reverse)   a |= A_REVERSE;
+    if (c.a.dim)               a |= A_DIM;
+    if (c.a.invisible)         a |= A_INVIS;
+    if (c.a.bold || c.a.blink) a |= A_BOLD;
+    if (c.a.underline)         a |= A_UNDERLINE;
+    if (c.a.reverse)           a |= A_REVERSE;
 
     setcchar(&r, s, a, TOPAIR(c.a.fg, c.a.bg), NULL);
     return &r;
