@@ -66,6 +66,7 @@ struct NODE{
 static NODE *root, *focused;
 static bool monochrome;
 static int commandkey = CTL(COMMAND_KEY);
+static fd_set fds;
 
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n, bool force);
@@ -104,11 +105,14 @@ static void
 freenode(NODE *n, bool recurse)
 {
     if (n){
-        if (n->pt >= 0) close(n->pt); 
         if (n->win) delwin(n->win);
         if (n->vt) tmt_close(n->vt); 
         if (recurse) freenode(n->c1, true);
         if (recurse) freenode(n->c2, true);
+        if (n->pt >= 0){
+            close(n->pt);
+            FD_CLR(n->pt, &fds);
+        }
         free(n);
     }
 }
@@ -179,6 +183,7 @@ newview(NODE *p, int y, int x, int h, int w)
         return NULL;
     }
 
+    FD_SET(n->pt, &fds);
     return n;
 }
 
@@ -372,32 +377,19 @@ split(NODE *n, node_t t)
 }
 
 static void
-walk(NODE *n, bool (*c)(NODE *n, void *p), void *p)
+getinput(NODE *n, fd_set *f)
 {
-    if (c(n, p)){
-        if (n->c1) walk(n->c1, c, p);
-        if (n->c2) walk(n->c2, c, p);
-    }
-}
+    if (n->c1) getinput(n->c1, f);
+    if (n->c2) getinput(n->c2, f);
 
-static bool
-addfds(NODE *n, void *p)
-{
-    if (n->pt >= 0) FD_SET(n->pt, (fd_set *)p);
-    return true;
-}
-
-static bool
-getinput(NODE *n, void *p)
-{
-    if (n->pt >= 0 && FD_ISSET(n->pt, (fd_set *)p)){
+    if (n->pt >= 0 && FD_ISSET(n->pt, f)){
         char buf[BUFMAX + 1] = {0};
         ssize_t r = read(n->pt, buf, BUFMAX);
-        if (r < 0) return errno == EINTR? true : (deletenode(n), false);
-        tmt_writemb(n->vt, buf, r);
+        if (r > 0)
+            tmt_writemb(n->vt, buf, r);
+        else if (r < 0 && errno != EINTR)
+            deletenode(n);
     }
-
-    return true;
 }
 
 static bool
@@ -408,7 +400,7 @@ handlechar(int k)
     #define DO(s, i, a) if (s == cmd && i == k)\
         { a ; cmd = false; return true;}
 
-    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS); draw(root, true))
+    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   ERR,           return true)
     DO(cmd,   commandkey,    return cmd = !cmd)
     DO(false, '\n',          WRITESTR("\r"))
@@ -447,18 +439,14 @@ static void
 run(void)
 {
     while (root){
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(STDIN_FILENO, &fds);
-
-        walk(root, addfds, &fds);
-        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0) FD_ZERO(&fds);
+        fd_set nfds = fds;
+        if (select(FD_SETSIZE, &nfds, NULL, NULL, NULL) < 0) FD_ZERO(&nfds);
 
         int c;
         while ((c = wgetch(focused->win)) != ERR) if (!handlechar(c))
             safewrite(focused->pt, (char *)&c, 1);
 
-        walk(root, getinput, &fds);
+        getinput(root, &nfds);
         refresh();
         fixcursor();
     }
@@ -494,6 +482,8 @@ main(int argc, char **argv)
 {
     int c = 0;
 
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
     while ((c = getopt(argc, argv, "mc:e:")) != -1){
         switch (c){

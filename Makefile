@@ -1,5 +1,5 @@
 CC      := gcc
-CFLAGS  ?= -O3 -std=c99 -Wall -Wextra -pedantic
+CFLAGS  ?= -g -std=c99 -Wall -Wextra -pedantic
 HEADERS ?= -DNCURSESW_INCLUDE_H="<ncursesw/curses.h>"
 LIBPATH ?=
 DESTDIR ?= /usr/local
