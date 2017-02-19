@@ -32,6 +32,7 @@
 #include NCURSESW_INCLUDE_H
 
 #include "tmt.h"
+#include "config.h"
 
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
@@ -65,7 +66,7 @@ struct NODE{
 
 static NODE *root, *focused;
 static bool monochrome, needresize = true;
-static int commandkey = CTL('g');
+static int commandkey = CTL(COMMAND_KEY);
 
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n, bool force);
@@ -429,14 +430,14 @@ handlechar(int k, int pt)
     DO(false, KEY_HOME,      WRITESTR(TMT_KEY_HOME))
     DO(false, KEY_END,       WRITESTR(TMT_KEY_END))
     DO(cmd,   commandkey,    return cmd = !cmd)
-    DO(true,  KEY_UP,        focus(findnode(root, ABOVE(focused))))
-    DO(true,  KEY_DOWN,      focus(findnode(root, BELOW(focused))))
-    DO(true,  KEY_LEFT,      focus(findnode(root, LEFT(focused))))
-    DO(true,  KEY_RIGHT,     focus(findnode(root, RIGHT(focused))))
-    DO(true,  'h',           split(focused, HORIZONTAL))
-    DO(true,  'v',           split(focused, VERTICAL))
-    DO(true,  'w',           deletenode(focused))
-    DO(true,  'l',           draw(root, true))
+    DO(true,  MOVE_UP,        focus(findnode(root, ABOVE(focused))))
+    DO(true,  MOVE_DOWN,      focus(findnode(root, BELOW(focused))))
+    DO(true,  MOVE_LEFT,      focus(findnode(root, LEFT(focused))))
+    DO(true,  MOVE_RIGHT,     focus(findnode(root, RIGHT(focused))))
+    DO(true,  SPLIT_HORIZONTAL,           split(focused, HORIZONTAL))
+    DO(true,  SPLIT_VERTICAL,           split(focused, VERTICAL))
+    DO(true,  DELETE_NODE,           deletenode(focused))
+    DO(true,  REDRAW,           draw(root, true))
 
     return cmd = false;
 }
