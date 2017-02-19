@@ -62,6 +62,7 @@ static NODE *root, *focused;
 static bool monochrome;
 static int commandkey = CTL(COMMAND_KEY);
 static fd_set fds;
+static int nfds = 1; /* stdin */
 
 static char iobuf[BUFSIZ + 1];
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -179,6 +180,7 @@ newview(NODE *p, int y, int x, int h, int w)
     }
 
     FD_SET(n->pt, &fds);
+    nfds = n->pt > nfds? n->pt : nfds;
     return n;
 }
 
@@ -431,12 +433,12 @@ static void
 run(void)
 {
     while (root){
-        fd_set nfds = fds;
-        if (select(FD_SETSIZE, &nfds, NULL, NULL, NULL) < 0) FD_ZERO(&nfds);
+        fd_set sfds = fds;
+        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0) FD_ZERO(&sfds);
 
         while (handlechar(wgetch(focused->win))) ;
 
-        getinput(root, &nfds);
+        getinput(root, &sfds);
         refresh();
         fixcursor();
     }
