@@ -222,19 +222,17 @@ findnode(NODE *n, int y, int x)
         if (n->c1 && IN(n->c1, y, x)) return findnode(n->c1, y, x);
         if (n->c2 && IN(n->c2, y, x)) return findnode(n->c2, y, x);
         return n;
-    } else
-        return NULL;
+    }
+    return NULL;
 }
 
 static void
 replacechild(NODE *n, NODE *c1, NODE *c2)
 {
     c2->p = n;
-
     if (!n){
         root = c2;
         reshape(c2, 0, 0, LINES, COLS);
-        c2->p = NULL;
     } else if (n->c1 == c1)
         n->c1 = c2;
     else if (n->c2 == c1)
@@ -370,19 +368,19 @@ split(NODE *n, node_t t)
     draw(p? p : root, true);
 }
 
-static void
+static bool
 getinput(NODE *n, fd_set *f)
 {
-    if (n->c1) getinput(n->c1, f);
-    if (n->c2) getinput(n->c2, f);
-
-    if (n->pt >= 0 && FD_ISSET(n->pt, f)){
+    if (n && n->c1 && !getinput(n->c1, f)) return false;
+    if (n && n->c2 && !getinput(n->c2, f)) return false;
+    if (n && n->pt >= 0 && FD_ISSET(n->pt, f)){
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
             tmt_writemb(n->vt, iobuf, r);
-        else if (r < 0 && errno != EINTR)
-            deletenode(n);
+        else if (r < 0)
+            return errno == EINTR? true : (deletenode(n), false);
     }
+    return true;
 }
 
 static bool
