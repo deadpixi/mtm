@@ -15,6 +15,7 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <locale.h>
 #include <pty.h>
 #include <pwd.h>
@@ -32,12 +33,6 @@
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
 #define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
-
-#ifdef __GNUC__
-#define UNUSED __attribute__((__unused__))
-#else
-#define UNUSED
-#endif
 
 typedef enum{
     HORIZONTAL,
@@ -145,7 +140,7 @@ fixcursor(void)
 }
 
 void
-callback(tmt_msg_t m, struct TMT *v UNUSED, const void *r UNUSED, void *p)
+callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
 {
     switch (m){
         case TMT_MSG_UPDATE: drawview((NODE *)p, false); break;
@@ -180,6 +175,7 @@ newview(NODE *p, int y, int x, int h, int w)
     }
 
     FD_SET(n->pt, &fds);
+    fcntl(n->pt, F_SETFL, O_NONBLOCK);
     nfds = n->pt > nfds? n->pt : nfds;
     return n;
 }
@@ -379,8 +375,10 @@ getinput(NODE *n, fd_set *f)
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
             tmt_writemb(n->vt, iobuf, r);
-        else if (r < 0)
-            return errno == EINTR? true : (deletenode(n), false);
+        else if (r < 0){
+            if (errno != EINTR && errno != EWOULDBLOCK)
+                return deletenode(n), false;
+        }
     }
     return true;
 }
