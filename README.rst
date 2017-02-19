@@ -17,8 +17,8 @@ Compatibility
 Size
     mtm is 500 lines of C, including whitespace and comments.
     If you include the terminal emulation layer (which is `available
-    separately`_ as a library), the total number of lines is under a
-    thousand.
+    separately`_ as a library), the total number of lines is still
+    under a thousand.
 
 .. _`available separately`: https://github.com/deadpixi/libtmt
 
