@@ -15,8 +15,8 @@
 #define MOVE_LEFT  KEY_LEFT
 
 /* The split terminal keys. */
-#define SPLIT_HORIZONTAL 'h'
-#define SPLIT_VERTICAL 'v'
+#define HSPLIT 'h'
+#define VSPLIT 'v'
 
 /* The delete terminal key. */
 #define DELETE_NODE 'w'
