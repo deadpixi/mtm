@@ -25,10 +25,10 @@ Stability
     You don't need to worry about it changing on you unexpectedly.
     The only changes that can happen at this point are:
 
-        - Bug fixes.
-        - Translation improvements.
-        - Accessibility improvements.
-        - Fixes to keep it working on modern OSes.
+    - Bug fixes.
+    - Translation improvements.
+    - Accessibility improvements.
+    - Fixes to keep it working on modern OSes.
 
 .. _`available separately`: https://github.com/deadpixi/libtmt
 
