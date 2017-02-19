@@ -10,7 +10,7 @@ mtm: tmt.c mtm.c config.h
 	$(CC) $(CFLAGS) -o $@ $(HEADERS) tmt.c mtm.c $(LIBPATH) -lncursesw -lutil
 
 config.h: config.def.h
-	cp config.def.h config.h
+	cp -i config.def.h config.h
 
 install: mtm
 	cp mtm $(DESTDIR)/bin
