@@ -372,13 +372,15 @@ split(NODE *n, node_t t)
     draw(p? p : root, true);
 }
 
-static void
+static bool
 walk(NODE *n, bool (*c)(NODE *n, void *p), void *p)
 {
     if (c(n, p)){
-        if (n->c1) walk(n->c1, c, p);
-        if (n->c2) walk(n->c2, c, p);
+        if (n && n->c1 && !walk(n->c1, c, p)) return false;
+        if (n && n->c2 && !walk(n->c2, c, p)) return false;
+        return true;
     }
+    return false;
 }
 
 static bool
