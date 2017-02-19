@@ -61,8 +61,6 @@ struct TMT{
 
     bool dirty;
     TMTSCREEN screen;
-    size_t aline;
-    size_t acol;
 
     TMTCALLBACK cb;
     void *p;
@@ -82,7 +80,7 @@ static TMTATTRS defattrs = {0, .fg = TMT_COLOR_WHITE, .bg = TMT_COLOR_BLACK};
 static void
 dirtylines(TMT *vt, size_t s, size_t e)
 {
-    for (size_t i = s; i < e && i < vt->screen.nline; i++)
+    for (size_t i = s; i < e; i++)
         vt->dirty = vt->screen.lines[i]->dirty = true;
 }
 
@@ -99,8 +97,8 @@ clearline(TMT *vt, TMTLINE *l, size_t s, size_t e)
 static void
 clearlines(TMT *vt, size_t r, size_t n)
 {
-    for (size_t i = r; i < r + n && i < vt->aline; i++)
-        clearline(vt, vt->screen.lines[i], 0, vt->acol);
+    for (size_t i = r; i < r + n; i++)
+        clearline(vt, vt->screen.lines[i], 0, vt->screen.ncol);
 }
 
 static void
@@ -146,10 +144,10 @@ HANDLER(ed)
     size_t e = s->nline;
 
     switch (P0(0)){
-        case 0: b = c->r + 1; clearline(vt, l, c->c, vt->acol); break;
-        case 1: e = c->r - 1; clearline(vt, l, 0, c->c);        break;
-        case 2:  /* use defaults */                             break;
-        default: /* do nothing   */                             return;
+        case 0: b = c->r + 1; clearline(vt, l, c->c, vt->screen.ncol); break;
+        case 1: e = c->r - 1; clearline(vt, l, 0, c->c);               break;
+        case 2:  /* use defaults */                                    break;
+        default: /* do nothing   */                                    return;
     }
 
     clearlines(vt, b, e - b);
@@ -163,7 +161,7 @@ HANDLER(ich)
 
     memmove(l->chars + c->c + n, l->chars + c->c,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
-    clearline(vt, l, c->c, vt->acol);
+    clearline(vt, l, c->c, vt->screen.nline);
 }
 
 HANDLER(dch)
@@ -175,14 +173,14 @@ HANDLER(dch)
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
 
-    clearline(vt, l, c->c, vt->acol);
+    clearline(vt, l, c->c, vt->screen.nline);
 }
 
 HANDLER(el)
     switch (P0(0)){
-        case 0: clearline(vt, l, c->c, vt->acol); break;
-        case 1: clearline(vt, l, 0, c->c);        break;
-        case 2: clearline(vt, l, 0, vt->acol);    break;
+        case 0: clearline(vt, l, c->c, vt->screen.ncol); break;
+        case 1: clearline(vt, l, 0, c->c);               break;
+        case 2: clearline(vt, l, 0, vt->screen.ncol);    break;
     }
 }
 
@@ -313,11 +311,15 @@ allocline(TMT *vt, TMTLINE *o, size_t n)
 }
 
 static void
-freelines(TMT *vt, size_t n)
+freelines(TMT *vt, size_t s, size_t n, bool screen)
 {
-    for (size_t i = 0; vt->screen.lines && i < n; i++)
+    for (size_t i = s; vt->screen.lines && i < s + n; i++){
         free(vt->screen.lines[i]);
-    free(vt->screen.lines);
+        vt->screen.lines[i] = NULL;
+    }
+
+    if (screen)
+        free(vt->screen.lines);
 }
 
 TMT *
@@ -340,7 +342,7 @@ tmt_open(size_t nline, size_t ncol, TMTCALLBACK cb, void *p)
 void
 tmt_close(TMT *vt)
 {
-    freelines(vt, vt->aline);
+    freelines(vt, 0, vt->screen.nline, true);
     free(vt);
 }
 
@@ -350,26 +352,26 @@ tmt_resize(TMT *vt, size_t nline, size_t ncol)
     if (nline <= 2 || ncol <= 2)
         return false;
 
-    if (nline > vt->aline || ncol > vt->acol){
-        TMTLINE **l = realloc(vt->screen.lines, nline * sizeof(TMTLINE *));
-        if (!l)
-            return false;
+    if (nline < vt->screen.nline)
+        freelines(vt, nline, vt->screen.nline - nline, false);
 
-        vt->screen.lines = l;
-        for (size_t i = 0; i < nline; i++){
-            if (i >= vt->aline)
-                vt->screen.lines[i] = allocline(vt, NULL, ncol);
-            if (ncol > vt->acol)
-                vt->screen.lines[i] = allocline(vt, vt->screen.lines[i], ncol);
-            if (!vt->screen.lines[i])
-                return freelines(vt, i), false;
-        }
-        vt->aline = nline;
-        vt->acol = ncol;
+    TMTLINE **l = realloc(vt->screen.lines, nline * sizeof(TMTLINE *));
+    if (!l) return false;
+
+    vt->screen.lines = l;
+    for (size_t i = 0; i < nline; i++){
+        TMTLINE *nl = NULL;
+        if (i >= vt->screen.nline)
+            nl = vt->screen.lines[i] = allocline(vt, NULL, ncol);
+        else
+            nl = allocline(vt, vt->screen.lines[i], ncol);
+
+        if (!nl)
+            return false;
+        vt->screen.lines[i] = nl;
     }
-    clearlines(vt, vt->screen.nline, vt->aline);
-    vt->screen.nline = nline;
     vt->screen.ncol = ncol;
+    vt->screen.nline = nline;
 
     fixcursor(vt);
     dirtylines(vt, 0, nline);
@@ -476,7 +478,7 @@ void
 tmt_clean(TMT *vt)
 {
     vt->dirty = false;
-    for (size_t i = 0; i < vt->aline; i++)
+    for (size_t i = 0; i < vt->screen.nline; i++)
         vt->screen.lines[i]->dirty = false;
 }
 
