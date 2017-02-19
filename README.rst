@@ -39,6 +39,9 @@ Installation and configuration is fairly simple:
   Other curses implementations might work, but have not been tested.
 - Edit the variables at the top of the Makefile if you need to
   (you probably don't).
+- If you want to change the default keybindings, copy `config.def.h`
+  to `config.h` and edit the copy. Otherwise the build process will
+  use the default.
 - Run `make`.
 - Run `make install` if desired.
 
