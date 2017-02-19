@@ -14,9 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200809L
-#define _XOPEN_SOURCE_EXTENDED
-
 #include <errno.h>
 #include <locale.h>
 #include <pty.h>
@@ -27,7 +24,6 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #include NCURSESW_INCLUDE_H
 
 #include "tmt.h"
@@ -36,7 +32,6 @@
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
 #define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
-#define BUFMAX 1000
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
@@ -68,6 +63,7 @@ static bool monochrome;
 static int commandkey = CTL(COMMAND_KEY);
 static fd_set fds;
 
+static char iobuf[BUFSIZ + 1];
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n, bool force);
 static void drawview(NODE *n, bool force);
@@ -301,7 +297,6 @@ reshape(NODE *n, int y, int x, int h, int w)
         reshapeview(n, y, x, h, w);
     else
         reshapechildren(n);
-
     draw(n, true);
 }
 
@@ -382,10 +377,9 @@ getinput(NODE *n, fd_set *f)
     if (n->c2) getinput(n->c2, f);
 
     if (n->pt >= 0 && FD_ISSET(n->pt, f)){
-        char buf[BUFMAX + 1] = {0};
-        ssize_t r = read(n->pt, buf, BUFMAX);
+        ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
-            tmt_writemb(n->vt, buf, r);
+            tmt_writemb(n->vt, iobuf, r);
         else if (r < 0 && errno != EINTR)
             deletenode(n);
     }
@@ -394,14 +388,13 @@ getinput(NODE *n, fd_set *f)
 static bool
 handlechar(int k)
 {
-    static bool cmd = false;
+    static bool st = false;
     #define WRITESTR(s) safewrite(focused->pt, s, strlen(s))
-    #define DO(s, i, a) if (s == cmd && i == k)\
-        { a ; cmd = false; return true;}
+    #define DO(s, i, a) if (s == st && i == k) { a ; st = false; return true;}
 
-    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
-    DO(cmd,   ERR,           return true)
-    DO(cmd,   commandkey,    return cmd = !cmd)
+    DO(st,    KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
+    DO(st,    ERR,           return false)
+    DO(st,    commandkey,    return st = !st)
     DO(false, '\n',          WRITESTR("\r"))
     DO(false, KEY_DOWN,      WRITESTR(TMT_KEY_DOWN))
     DO(false, KEY_UP,        WRITESTR(TMT_KEY_UP))
@@ -431,7 +424,9 @@ handlechar(int k)
     DO(true,  DELETE_NODE,   deletenode(focused))
     DO(true,  REDRAW,        draw(root, true))
 
-    return cmd = false;
+    char c[] = {(char)k, 0};
+    WRITESTR(c);
+    return true;
 }
 
 static void
@@ -441,9 +436,7 @@ run(void)
         fd_set nfds = fds;
         if (select(FD_SETSIZE, &nfds, NULL, NULL, NULL) < 0) FD_ZERO(&nfds);
 
-        int c;
-        while ((c = wgetch(focused->win)) != ERR) if (!handlechar(c))
-            safewrite(focused->pt, (char *)&c, 1);
+        while (handlechar(wgetch(focused->win))) ;
 
         getinput(root, &nfds);
         refresh();
@@ -479,11 +472,11 @@ initcolors(void)
 int
 main(int argc, char **argv)
 {
-    int c = 0;
-
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
+
+    int c = 0;
     while ((c = getopt(argc, argv, "mc:e:")) != -1){
         switch (c){
             case 'm': monochrome = true;                                break;

@@ -1,13 +1,15 @@
-CC      := gcc
-CFLAGS  ?= -g -std=c99 -Wall -Wextra -pedantic
-HEADERS ?= -DNCURSESW_INCLUDE_H="<ncursesw/curses.h>"
-LIBPATH ?=
-DESTDIR ?= /usr/local
+CC       := gcc
+CFLAGS   ?= -g -std=c99 -Wall -Wextra -pedantic
+FEATURES ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED
+HEADERS  ?= -DNCURSESW_INCLUDE_H="<ncursesw/curses.h>"
+LIBPATH  ?=
+DESTDIR  ?= /usr/local
+LIBS     ?= -lncursesw -lutil
 
 all: mtm
 
 mtm: tmt.c mtm.c config.h
-	$(CC) $(CFLAGS) -o $@ $(HEADERS) tmt.c mtm.c $(LIBPATH) -lncursesw -lutil
+	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) tmt.c mtm.c $(LIBPATH) $(LIBS)
 
 config.h: config.def.h
 	cp -i config.def.h config.h
