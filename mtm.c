@@ -402,10 +402,10 @@ getinput(NODE *n, void *p)
 }
 
 static bool
-handlechar(int k, int pt)
+handlechar(int k)
 {
     static bool cmd = false;
-    #define WRITESTR(s) safewrite(pt, s, strlen(s))
+    #define WRITESTR(s) safewrite(focused->pt, s, strlen(s))
     #define DO(s, i, a) if (s == cmd && i == k)\
         { a ; cmd = false; return true;}
 
@@ -473,7 +473,7 @@ run(void)
 
         if (FD_ISSET(STDIN_FILENO, &fds)){
             int c = wgetch(focused->win);
-            if (!handlechar(c, focused->pt))
+            if (!handlechar(c))
                 safewrite(focused->pt, (char *)&c, 1);
         }
 
