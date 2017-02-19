@@ -21,7 +21,6 @@
 #include <locale.h>
 #include <pty.h>
 #include <pwd.h>
-#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +64,7 @@ struct NODE{
 };
 
 static NODE *root, *focused;
-static bool monochrome, needresize = true;
+static bool monochrome;
 static int commandkey = CTL(COMMAND_KEY);
 
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -164,6 +163,7 @@ newview(NODE *p, int y, int x, int h, int w)
 
     n->win = newwin(h, w, y, x);
     keypad(n->win, TRUE);
+    nodelay(n->win, TRUE);
     if (!n->win) return freenode(n, false), NULL;
 
     n->vt = tmt_open(h, w, callback, n);
@@ -409,6 +409,9 @@ handlechar(int k)
     #define DO(s, i, a) if (s == cmd && i == k)\
         { a ; cmd = false; return true;}
 
+    DO(cmd,   KEY_RESIZE,       reshape(root, 0, 0, LINES, COLS); draw(root, true))
+    DO(cmd,   ERR,              return true)
+    DO(cmd,   commandkey,       return cmd = !cmd)
     DO(false, '\n',             WRITESTR("\r"))
     DO(false, KEY_DOWN,         WRITESTR(TMT_KEY_DOWN))
     DO(false, KEY_UP,           WRITESTR(TMT_KEY_UP))
@@ -429,7 +432,6 @@ handlechar(int k)
     DO(false, KEY_PPAGE,        WRITESTR(TMT_KEY_PAGE_UP))
     DO(false, KEY_HOME,         WRITESTR(TMT_KEY_HOME))
     DO(false, KEY_END,          WRITESTR(TMT_KEY_END))
-    DO(cmd,   commandkey,       return cmd = !cmd)
     DO(true,  MOVE_UP,          focus(findnode(root, ABOVE(focused))))
     DO(true,  MOVE_DOWN,        focus(findnode(root, BELOW(focused))))
     DO(true,  MOVE_LEFT,        focus(findnode(root, LEFT(focused))))
@@ -443,39 +445,20 @@ handlechar(int k)
 }
 
 static void
-handleresize(void)
-{
-    struct winsize ws;
-    ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
-    resize_term(ws.ws_row, ws.ws_col);
-    reshape(root, 0, 0, LINES, COLS);
-    draw(root, true);
-    refresh();
-    fixcursor();
-    needresize = false;
-}
-
-static void
 run(void)
 {
     while (root){
-        if (needresize) handleresize();
-
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(STDIN_FILENO, &fds);
 
         walk(root, addfds, &fds);
-        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0){
-            if (errno == EINTR) continue;
-            quit(EXIT_FAILURE, strerror(errno));
-        }
+        if (select(FD_SETSIZE, &fds, NULL, NULL, NULL) < 0)
+            FD_ZERO(&fds);
 
-        if (FD_ISSET(STDIN_FILENO, &fds)){
-            int c = wgetch(focused->win);
-            if (!handlechar(c))
-                safewrite(focused->pt, (char *)&c, 1);
-        }
+        int c;
+        while ((c = wgetch(focused->win)) != ERR) if (!handlechar(c))
+            safewrite(focused->pt, (char *)&c, 1);
 
         walk(root, getinput, &fds);
         refresh();
@@ -508,12 +491,6 @@ initcolors(void)
     }
 }
 
-static void
-handlesigwinch(int sig UNUSED)
-{
-    needresize = true;
-}
-
 int
 main(int argc, char **argv)
 {
@@ -528,11 +505,6 @@ main(int argc, char **argv)
             default:  quit(EXIT_FAILURE, USAGE);                        break;
         }
     }
-
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = handlesigwinch;
-    sigaction(SIGWINCH, &sa, NULL);
 
     initscr();
     raw();

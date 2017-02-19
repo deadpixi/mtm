@@ -36,7 +36,10 @@ Installation
 Installation and configuration is fairly simple:
 
 - You need ncursesw.
-  Other curses implementations might work, but have not been tested.
+  If you want to support terminal resizing, ncursesw needs to be
+  compiled with its internal SIGWINCH handler; this is true for most
+  precompiled distributions.  Other curses implementations might work,
+  but have not been tested.
 - Edit the variables at the top of the Makefile if you need to
   (you probably don't).
 - If you want to change the default keybindings, copy `config.def.h`
