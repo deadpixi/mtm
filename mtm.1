@@ -34,7 +34,9 @@ in combination with the
 .Dq control
 key;
 by default this is
-.Dq "g" "."
+.Dq "g" ","
+though this default can be changed at compile time,
+and therefore may be different.
 .It Fl e Ar MILLISECONDS
 Wait up to
 .Ar MILLISECONDS
@@ -78,6 +80,9 @@ Delete the currently focused terminal.
 .It Em "l"
 Redraw the screen.
 .El
+.Pp
+Note that these key-command associations can be changed at compile time,
+and therefore may be different.
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
