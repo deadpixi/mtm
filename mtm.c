@@ -363,7 +363,7 @@ split(NODE *n, node_t t)
 
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
-        freenode(c, false);
+        freenode(v, false);
         return;
     }
 
