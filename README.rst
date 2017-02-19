@@ -3,7 +3,7 @@ Introduction
 
 mtm is the Micro Terminal Multiplexer, a terminal multiplexer.
 
-It has three major features/princples:
+It has four major features/princples:
 
 Simplicity
     There are three commands (change focus, split, close).  There are no
@@ -19,6 +19,16 @@ Size
     If you include the terminal emulation layer (which is `available
     separately`_ as a library), the total number of lines is still
     under a thousand.
+
+Stability
+    mtm is "finished" as it is now.
+    You don't need to worry about it changing on you unexpectedly.
+    The only changes that can happen at this point are:
+
+        - Bug fixes.
+        - Translation improvements.
+        - Accessibility improvements.
+        - Fixes to keep it working on modern OSes.
 
 .. _`available separately`: https://github.com/deadpixi/libtmt
 
