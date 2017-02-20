@@ -264,7 +264,7 @@ reshapeview(NODE *n, int y, int x, int h, int w)
     wresize(n->win, 1, 1);
     mvwin(n->win, y, x);
     wresize(n->win, h? h : 1, w? w : 1);
-    if (h >= 2 && w >= 2) tmt_resize(n->vt, h, w);
+    tmt_resize(n->vt, h, w);
     ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
