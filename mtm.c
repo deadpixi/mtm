@@ -143,7 +143,7 @@ callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
 {
     switch (m){
         case TMT_MSG_UPDATE: drawview((NODE *)p, false); break;
-        case TMT_MSG_MOVED:  fixcursor();                break;
+        case TMT_MSG_MOVED:  /* ignored */               break;
         case TMT_MSG_BELL:   beep();                     break;
     }
 }
@@ -200,7 +200,7 @@ focus(NODE *n)
         return;
     else if (n->t == VIEW){
         focused = n;
-        wrefresh(n->win);
+        wnoutrefresh(n->win);
     } else
         focus(n->c1? n->c1 : n->c2);
 }
@@ -323,8 +323,8 @@ drawview(NODE *n, bool force)
             mvwadd_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
     }
     tmt_clean(n->vt);
-    wrefresh(n->win);
-    refresh();
+    wnoutrefresh(n->win);
+    wnoutrefresh(stdscr);
 }
 
 static void
@@ -436,7 +436,7 @@ run(void)
         while (handlechar(wgetch(focused->win))) ;
 
         getinput(root, &sfds);
-        refresh();
+        doupdate();
         fixcursor();
     }
 }
