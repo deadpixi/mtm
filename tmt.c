@@ -30,27 +30,21 @@
 #include <string.h>
 #include "tmt.h"
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((__unused__))
-#else
-#define UNUSED
-#endif
-
 #define BUF_MAX 100
 #define PAR_MAX 8
 #define TAB 8
 #define MAX(x, y) (((size_t)(x) > (size_t)(y)) ? (size_t)(x) : (size_t)(y))
 #define MIN(x, y) (((size_t)(x) < (size_t)(y)) ? (size_t)(x) : (size_t)(y))
-#define CURLINE(vt) (vt)->screen.lines[(vt)->curs.r]
+#define CLINE(vt) (vt)->screen.lines[MIN((vt)->curs.r, (vt)->screen.nline - 1)]
 
 #define P0(x) (vt->pars[x])
 #define P1(x) (vt->pars[x]? vt->pars[x] : 1)
 #define CB(vt, m, a) ((vt)->cb? (vt)->cb(m, vt, a, (vt)->p) : (void)0)
 
-#define COMMON_VARS                    \
-    TMTSCREEN *s UNUSED = &vt->screen; \
-    TMTPOINT *c UNUSED = &vt->curs;    \
-    TMTLINE *l UNUSED = CURLINE(vt)
+#define COMMON_VARS             \
+    TMTSCREEN *s = &vt->screen; \
+    TMTPOINT *c = &vt->curs;    \
+    TMTLINE *l = CLINE(vt)
 
 #define HANDLER(name) static void name (TMT *vt) { COMMON_VARS; 
 
@@ -87,7 +81,7 @@ static void
 clearline(TMT *vt, TMTLINE *l, size_t s, size_t e)
 {
     vt->dirty = l->dirty = true;
-    for (size_t i = s; i < e; i++){
+    for (size_t i = s; i < e && i < vt->screen.ncol; i++){
         l->chars[i].a = vt->attrs;
         l->chars[i].c = L' ';
     }
@@ -96,7 +90,7 @@ clearline(TMT *vt, TMTLINE *l, size_t s, size_t e)
 static void
 clearlines(TMT *vt, size_t r, size_t n)
 {
-    for (size_t i = r; i < r + n; i++)
+    for (size_t i = r; i < r + n && i < vt->screen.nline; i++)
         clearline(vt, vt->screen.lines[i], 0, vt->screen.ncol);
 }
 
@@ -155,12 +149,13 @@ HANDLER(ed)
 HANDLER(ich)
     size_t n = P1(0);
 
-    if (n > s->ncol - c->c)
-        n = s->ncol - c->c;
+    if (n > s->ncol - c->c - 1)
+        n = s->ncol - c->c - 1;
 
     memmove(l->chars + c->c + n, l->chars + c->c,
-            (s->ncol - c->c - n) * sizeof(TMTCHAR));
-    clearline(vt, l, c->c, vt->screen.nline);
+            MIN(s->ncol - 1 - c->c,
+            (s->ncol - c->c - n - 1)) * sizeof(TMTCHAR));
+    clearline(vt, l, c->c, n);
 }
 
 HANDLER(dch)
@@ -172,7 +167,7 @@ HANDLER(dch)
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
 
-    clearline(vt, l, c->c, vt->screen.nline);
+    clearline(vt, l, s->ncol - c->c - n, s->ncol - n);
 }
 
 HANDLER(el)
@@ -242,7 +237,7 @@ handlechar(TMT *vt, wchar_t w)
     #define SC(S, C) (((S) << CHAR_BIT) | (int)(C))
     #define ON(S, C, A) case SC(S, C) : A ; return true
     #define DO(S, C, A) case SC(S, C):do {                              \
-        consumearg(vt); A; resetparser(vt); fixcursor(vt); return true; \
+        consumearg(vt); A; fixcursor(vt); resetparser(vt); return true; \
     } while (false)
 
     switch (SC(vt->state, w)){
@@ -299,13 +294,13 @@ notify(TMT *vt, bool update, bool moved)
 }
 
 static TMTLINE *
-allocline(TMT *vt, TMTLINE *o, size_t n)
+allocline(TMT *vt, TMTLINE *o, size_t n, size_t pc)
 {
     TMTLINE *l = realloc(o, sizeof(TMTLINE) + n * sizeof(TMTCHAR));
     if (!l)
         return NULL;
 
-    clearline(vt, l, o? vt->screen.ncol : 0, n);
+    clearline(vt, l, pc, n);
     return l;
 }
 
@@ -357,19 +352,19 @@ tmt_resize(TMT *vt, size_t nline, size_t ncol)
     TMTLINE **l = realloc(vt->screen.lines, nline * sizeof(TMTLINE *));
     if (!l) return false;
 
+    size_t pc = vt->screen.ncol;
     vt->screen.lines = l;
+    vt->screen.ncol = ncol;
     for (size_t i = 0; i < nline; i++){
         TMTLINE *nl = NULL;
         if (i >= vt->screen.nline)
-            nl = vt->screen.lines[i] = allocline(vt, NULL, ncol);
+            nl = vt->screen.lines[i] = allocline(vt, NULL, ncol, 0);
         else
-            nl = allocline(vt, vt->screen.lines[i], ncol);
+            nl = allocline(vt, vt->screen.lines[i], ncol, pc);
 
-        if (!nl)
-            return false;
+        if (!nl) return false;
         vt->screen.lines[i] = nl;
     }
-    vt->screen.ncol = ncol;
     vt->screen.nline = nline;
 
     fixcursor(vt);
@@ -389,9 +384,9 @@ writecharatcursor(TMT *vt, wchar_t w)
         return;
     #endif
 
-    CURLINE(vt)->chars[vt->curs.c].c = w;
-    CURLINE(vt)->chars[vt->curs.c].a = vt->attrs;
-    CURLINE(vt)->dirty = vt->dirty = true;
+    CLINE(vt)->chars[vt->curs.c].c = w;
+    CLINE(vt)->chars[vt->curs.c].a = vt->attrs;
+    CLINE(vt)->dirty = vt->dirty = true;
 
     if (c->c < s->ncol - 1)
         c->c++;
