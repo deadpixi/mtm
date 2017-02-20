@@ -58,8 +58,8 @@ static bool monochrome;
 static int commandkey = CTL(COMMAND_KEY);
 static fd_set fds;
 static int nfds = 1; /* stdin */
-
 static char iobuf[BUFSIZ + 1];
+
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n, bool force);
 static void drawview(NODE *n, bool force);
