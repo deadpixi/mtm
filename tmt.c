@@ -24,7 +24,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -349,7 +348,7 @@ tmt_close(TMT *vt)
 bool
 tmt_resize(TMT *vt, size_t nline, size_t ncol)
 {
-    if (nline <= 2 || ncol <= 2)
+    if (nline < 2 || ncol < 2)
         return false;
 
     if (nline < vt->screen.nline)
