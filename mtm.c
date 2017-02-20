@@ -29,6 +29,7 @@
 #include "tmt.h"
 #include "config.h"
 
+#define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
 #define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
 #define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
@@ -350,8 +351,10 @@ draw(NODE *n, bool force)
 static void
 split(NODE *n, node_t t)
 {
+    int nh = t == VERTICAL?   (n->h - 1) / 2 : n->h;
+    int nw = t == HORIZONTAL? (n->w - 1) / 2 : n->w;
     NODE *p = n->p;
-    NODE *v = newview(NULL, 0, 0, LINES, COLS);
+    NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v) return;
 
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
