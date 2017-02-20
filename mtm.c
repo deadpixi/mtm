@@ -18,6 +18,7 @@
 #include <locale.h>
 #include <pty.h>
 #include <pwd.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -472,9 +473,9 @@ initcolors(void)
 int
 main(int argc, char **argv)
 {
-    FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
+    signal(SIGCHLD, SIG_IGN);
 
     int c = 0;
     while ((c = getopt(argc, argv, "mc:e:")) != -1){
@@ -491,7 +492,6 @@ main(int argc, char **argv)
     noecho();
     start_color();
     initcolors();
-
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     run();
 
