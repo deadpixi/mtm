@@ -243,7 +243,7 @@ handlechar(TMT *vt, wchar_t w)
     switch (SC(vt->state, w)){
         DO(S_NUL, 0x07, CB(vt, TMT_MSG_BELL, NULL));
         DO(S_NUL, 0x08, if (c->c) c->c--);
-        DO(S_NUL, 0x09, for (size_t i = TAB - c->c % TAB; i > 0; i--) c->c++);
+        DO(S_NUL, 0x09, for (int i = TAB - c->c % TAB; i > 0; i--) c->c++);
         DO(S_NUL, 0x0a, c->r < s->nline - 1? (void)c->r++ : scrup(vt, 0, 1));
         DO(S_NUL, 0x0d, c->c = 0);
         ON(S_NUL, 0x1b, vt->state = S_ESC);
