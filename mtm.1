@@ -34,9 +34,7 @@ in combination with the
 .Dq control
 key.
 By default this is
-.Dq "g" ","
-though this default can be changed at compile time,
-and therefore may be different.
+.Dq "g" "."
 .It Fl e Ar MILLISECONDS
 Wait up to
 .Ar MILLISECONDS
@@ -61,28 +59,25 @@ the following keys are recognized as commands to
 .Nm
 when prefixed with the command character:
 .Bl -tag -width Ds
-.It Em "Up Arrow"
-Select the terminal above the currently focused one.
-.It Em "Down Arrow"
-Select the terminal below the currently focused one.
-.It Em "Right Arrow"
-Select the terminal to the right of the currently focused one.
-.It Em "Left Arrow"
-Select the terminal to the left of the currently focused one.
-.It Em "h"
-Split the focused terminal in half horizontally;
-the newly-created terminal will be focused.
-.It Em "v"
-Split the focused terminal in half vertically;
+.It Em "Up/Down/Right/Left Arrow"
+Select the terminal above/below/to the right of/to the left of the currently focused one.
+.It Em "h" "or" "v"
+Split the focused terminal in half horizontally
+.Pq "for 'h'"
+or vertically
+.Pq "for 'v'" ";"
 the newly-created terminal will be focused.
 .It Em "w"
 Delete the currently focused terminal.
 .It Em "l"
+.Pq "the letter ell"
 Redraw the screen.
 .El
 .Pp
-Note that these key-command associations can be changed at compile time,
-and therefore may be different.
+Note that these command keys,
+and the default prefix,
+can be changed at compile time and therefore may be different for this installation of
+.Nm "."
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
@@ -117,6 +112,6 @@ will attempt to fit all virtual terminals in the window at once.
 If many terminals are created and the containing window is shrunk too small,
 the display will be suboptimal.
 .Pp
-The only human language in which output from
-.Nm
-is generated is English.
+The only human language in which output is generated and in which documentation
+is available is English,
+regardless of the user's preferred language.
