@@ -92,7 +92,7 @@ Usage is simple::
 
     mtm [-m] [-c KEY] [-e MILLISECONDS]
 
-The `-m` flag puts mtm in monochrome mode, if you need that.
+The `-m` flag puts mtm in monochrome mode.
 
 The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
@@ -109,7 +109,7 @@ to this terminal that keyboad input is sent.  The focused terminal is
 indicated by the location of the cursor.
 
 The following commands are recognized in mtm, when preceded by the command
-prefix (by defaul *ctrl-g*):
+prefix (by default *ctrl-g*):
 
 Up/Down/Left/Right Arrow
     Focus the virtual terminal above/below/to the left of/to the right of
