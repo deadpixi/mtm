@@ -171,6 +171,7 @@ newview(NODE *p, int y, int x, int h, int w)
     else if (n->pid == 0){
         setsid();
         setenv("TERM", monochrome? "mach" : "mach-color", 1);
+        signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
     }
@@ -438,7 +439,6 @@ run(void)
         if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0) FD_ZERO(&sfds);
 
         while (handlechar(wgetch(focused->win))) ;
-
         getinput(root, &sfds);
         doupdate();
         fixcursor();
