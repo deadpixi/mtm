@@ -32,8 +32,7 @@
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define TOPAIR(fg, bg) (monochrome? 0 : (((fg) * 8) | (bg)))
-#define USAGE "usage: mtm [-m] [-e MILLISECONDS] [-c KEY]"
+#define USAGE "usage: mtm [-m] [-c KEY]"
 
 typedef enum{
     HORIZONTAL,
@@ -44,27 +43,27 @@ typedef enum{
 typedef struct NODE NODE;
 struct NODE{
     node_t t;
-
     NODE *p, *c1, *c2;
-    int y, x, h, w;
-
+    int y, x, h, w, pt;
     WINDOW *win;
     TMT *vt;
-    int pt;
-    pid_t pid;
 };
 
 static NODE *root, *focused;
-static bool monochrome;
-static int commandkey = CTL(COMMAND_KEY);
+static bool monochrome, cmd;
+static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
-static int nfds = 1; /* stdin */
 static char iobuf[BUFSIZ + 1];
-
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n, bool force);
 static void drawview(NODE *n, bool force);
 static void reshapechildren(NODE *n);
+
+#define TOPAIR(fg, bg) (monochrome? 0 :                          \
+    COLOR_PAIRS < 80? (((fg == -1? TMT_COLOR_WHITE : fg) << 3) | \
+                       (bg == -1? TMT_COLOR_BLACK : bg))       : \
+                      ((fg == -1? 128 : fg << 3)               | \
+                       (bg == -1? 64  : bg)))
 
 static const char *
 getshell(void)
@@ -165,10 +164,10 @@ newview(NODE *p, int y, int x, int h, int w)
     n->vt = tmt_open(h, w, callback, n);
     if (!n) return freenode(n, false), NULL;
 
-    n->pid = forkpty(&n->pt, NULL, NULL, &ws);
-    if (n->pid < 0)
+    pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
+    if (pid < 0)
         return freenode(n, false), NULL;
-    else if (n->pid == 0){
+    else if (pid == 0){
         setsid();
         setenv("TERM", monochrome? "mach" : "mach-color", 1);
         signal(SIGCHLD, SIG_DFL);
@@ -390,13 +389,12 @@ getinput(NODE *n, fd_set *f)
 static bool
 handlechar(int k)
 {
-    static bool st = false;
     #define WRITESTR(s) safewrite(focused->pt, s, strlen(s))
-    #define DO(s, i, a) if (s == st && i == k) { a ; st = false; return true;}
+    #define DO(s, i, a) if (s == cmd && i == k) { a ; cmd = false; return true;}
 
-    DO(st,    KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
-    DO(st,    ERR,           return false)
-    DO(st,    commandkey,    return st = !st)
+    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
+    DO(cmd,   ERR,           return false)
+    DO(cmd,   commandkey,    return cmd = !cmd)
     DO(false, '\n',          WRITESTR("\r"))
     DO(false, KEY_DOWN,      WRITESTR(TMT_KEY_DOWN))
     DO(false, KEY_UP,        WRITESTR(TMT_KEY_UP))
@@ -424,7 +422,7 @@ handlechar(int k)
     DO(true,  HSPLIT,        split(focused, HORIZONTAL))
     DO(true,  VSPLIT,        split(focused, VERTICAL))
     DO(true,  DELETE_NODE,   deletenode(focused))
-    DO(true,  REDRAW,        draw(root, true))
+    DO(true,  REDRAW,        erase(); draw(root, true))
 
     char c[] = {(char)k, 0};
     WRITESTR(c);
@@ -437,7 +435,6 @@ run(void)
     while (root){
         fd_set sfds = fds;
         if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0) FD_ZERO(&sfds);
-
         while (handlechar(wgetch(focused->win))) ;
         getinput(root, &sfds);
         doupdate();
@@ -464,8 +461,9 @@ tocolor(tmt_color_t c)
 static void
 initcolors(void)
 {
-    for (int fg = 1; !monochrome && fg < TMT_COLOR_MAX; fg++){
-        for (int bg = 1; bg < TMT_COLOR_MAX; bg++) if (TOPAIR(fg, bg))
+    if (COLOR_PAIRS >= 80 || monochrome) use_default_colors();
+    for (short fg = -1; !monochrome && fg < TMT_COLOR_MAX; fg++){
+        for (short bg = -1; bg < TMT_COLOR_MAX; bg++)
             init_pair(TOPAIR(fg, bg), tocolor(fg), tocolor(bg));
     }
 }
@@ -478,12 +476,11 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN);
 
     int c = 0;
-    while ((c = getopt(argc, argv, "mc:e:")) != -1){
+    while ((c = getopt(argc, argv, "mc:")) != -1){
         switch (c){
-            case 'm': monochrome = true;                                break;
-            case 'c': commandkey = CTL(optarg[0]);                      break;
-            case 'e': ESCDELAY = atoi(optarg)? atoi(optarg) : ESCDELAY; break;
-            default:  quit(EXIT_FAILURE, USAGE);                        break;
+            case 'm': monochrome = true;           break;
+            case 'c': commandkey = CTL(optarg[0]); break;
+            default:  quit(EXIT_FAILURE, USAGE);   break;
         }
     }
 
@@ -491,8 +488,10 @@ main(int argc, char **argv)
     raw();
     noecho();
     start_color();
+    monochrome = COLOR_PAIRS < 64? true : monochrome;
     initcolors();
     focus(root = newview(NULL, 0, 0, LINES, COLS));
+    draw(root, true);
     run();
 
     quit(EXIT_SUCCESS, NULL);
