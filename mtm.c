@@ -50,7 +50,7 @@ struct NODE{
 };
 
 static NODE *root, *focused;
-static bool monochrome, cmd;
+static bool monochrome, unicode, cmd;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -169,7 +169,7 @@ newview(NODE *p, int y, int x, int h, int w)
         return freenode(n, false), NULL;
     else if (pid == 0){
         setsid();
-        setenv("NCURSES_NO_UTF8_ACS", "1", 1);
+        if (unicode) setenv("NCURSES_NO_UTF8_ACS", "1", 1);
         setenv("TERM", monochrome? "mach" : "mach-color", 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
@@ -477,10 +477,11 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN);
 
     int c = 0;
-    while ((c = getopt(argc, argv, "mc:")) != -1){
+    while ((c = getopt(argc, argv, "umc:")) != -1){
         switch (c){
             case 'm': monochrome = true;           break;
             case 'c': commandkey = CTL(optarg[0]); break;
+            case 'u': unicode = true;              break;
             default:  quit(EXIT_FAILURE, USAGE);   break;
         }
     }

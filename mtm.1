@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl m
+.Op Fl u
 .Op Fl c Ar CHARACTER
 .Sh DESCRIPTION
 .Nm
@@ -29,6 +30,9 @@ do not use color of any sort.
 By default,
 .Nm
 will run in color mode.
+.It Fl u
+Use Unicode box drawing characters;
+this should be specified only if your system's wide-character type corresponds to Unicode.
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER
