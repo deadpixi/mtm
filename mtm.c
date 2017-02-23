@@ -169,6 +169,7 @@ newview(NODE *p, int y, int x, int h, int w)
         return freenode(n, false), NULL;
     else if (pid == 0){
         setsid();
+        setenv("NCURSES_NO_UTF8_ACS", "1", 1);
         setenv("TERM", monochrome? "mach" : "mach-color", 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
