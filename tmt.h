@@ -63,6 +63,7 @@
 typedef struct TMT TMT;
 
 typedef enum{
+    TMT_COLOR_DEFAULT = -1,
     TMT_COLOR_BLACK = 1,
     TMT_COLOR_RED,
     TMT_COLOR_GREEN,
@@ -71,7 +72,6 @@ typedef enum{
     TMT_COLOR_MAGENTA,
     TMT_COLOR_CYAN,
     TMT_COLOR_WHITE,
-
     TMT_COLOR_MAX
 } tmt_color_t;
 
