@@ -8,7 +8,6 @@
 .Nm
 .Op Fl m
 .Op Fl c Ar CHARACTER
-.Op Fl e Ar MILLISECONDS
 .Sh DESCRIPTION
 .Nm
 is a terminal multiplexer,
@@ -27,6 +26,9 @@ The options are
 .It Fl m
 Run in monochrome mode;
 do not use color of any sort.
+By default,
+.Nm
+will run in color mode.
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER
@@ -35,16 +37,9 @@ in combination with the
 key.
 By default this is
 .Dq "g" "."
-.It Fl e Ar MILLISECONDS
-Wait up to
-.Ar MILLISECONDS
-after an escape character is input,
-to determine if it is the beginning of a special key sequence.
-By default,
-this is 1000
-.Pq "one second" "."
 .El
 .Pp
+.Ss Usage
 .Nm
 divides the screen into multiple virtual terminals.
 Each virtual terminal is updated and accessed independently.
@@ -81,10 +76,41 @@ can be changed at compile time and therefore may be different for this installat
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
+.Ss Colors
+If the hosting terminal supports at least 80 color pairs
+.Po
+e.g.
+.Em "xterm-256color"
+but not plain
+.Em xterm
+.Pc ","
+.Nm
+will use the
+.Pq natural
+colors defined for the default virtual terminal forground and background colors.
+.Pp
+If the hosting terminal does not support at least 64 color pairs
+.Pq "rare nowadays" ","
+.Nm
+will run in monochrome mode.
+.Pp
+Note that this does not affect the number of available color pairs within the virtual
+terminals created by
+.Nm ";"
+this number remains fixed at either 64
+.Pq "when run in color mode"
+or 1
+.Pq "when run in monochrome mode" "."
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
 .Bl -tag -width Ds
+.It Ev ESCDELAY
+This variable specifies the number of milliseconds
+.Nm
+will wait after seeing an escape character for a special character sequence to complete.
+By default this is 1000
+.Pq "one second" "."
 .It Ev LC_CTYPE Ev LC_ALL Ev LANG
 These variables are consulted to determine the encoding used for textual data.
 .It SHELL
@@ -106,6 +132,8 @@ and will finally use
 .Sh SEE ALSO
 .Xr sh 1
 .Sh BUGS
+.Pp
+Rendering of double-width characters will sometimes corrupt the display.
 .Pp
 .Nm
 will attempt to fit all virtual terminals in the window at once.
