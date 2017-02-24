@@ -185,14 +185,14 @@ HANDLER(dch)
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
 
-    clearline(vt, l, s->ncol - c->c - n, s->ncol - n);
+    clearline(vt, l, s->ncol - c->c - n, s->ncol);
 }
 
 HANDLER(el)
     switch (P0(0)){
-        case 0: clearline(vt, l, c->c, vt->screen.ncol); break;
-        case 1: clearline(vt, l, 0, c->c);               break;
-        case 2: clearline(vt, l, 0, vt->screen.ncol);    break;
+        case 0: clearline(vt, l, c->c, vt->screen.ncol);         break;
+        case 1: clearline(vt, l, 0, MIN(c->c + 1, s->ncol - 1)); break;
+        case 2: clearline(vt, l, 0, vt->screen.ncol);            break;
     }
 }
 
@@ -300,8 +300,8 @@ handlechar(TMT *vt, char i)
     DO(S_ARG, "m",          sgr(vt))
     DO(S_ARG, "n",          if (P0(0) == 6) dsr(vt))
     DO(S_ARG, "i",          (void)0)
-    DO(S_ESC, "s",          vt->oldcurs = vt->curs; vt->oldattrs = vt->attrs)
-    DO(S_ESC, "u",          vt->curs = vt->oldcurs; vt->attrs = vt->oldattrs)
+    DO(S_ARG, "s",          vt->oldcurs = vt->curs; vt->oldattrs = vt->attrs)
+    DO(S_ARG, "u",          vt->curs = vt->oldcurs; vt->attrs = vt->oldattrs)
     DO(S_ARG, "@",          ich(vt))
 
     return resetparser(vt), false;
