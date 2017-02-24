@@ -26,6 +26,7 @@
  */
 #include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "tmt.h"
@@ -40,23 +41,27 @@
 #define P0(x) (vt->pars[x])
 #define P1(x) (vt->pars[x]? vt->pars[x] : 1)
 #define CB(vt, m, a) ((vt)->cb? (vt)->cb(m, vt, a, (vt)->p) : (void)0)
+#define INESC ((vt)->state)
 
 #define COMMON_VARS             \
     TMTSCREEN *s = &vt->screen; \
     TMTPOINT *c = &vt->curs;    \
-    TMTLINE *l = CLINE(vt)
+    TMTLINE *l = CLINE(vt);     \
+    TMTCHAR *t = vt->tabs->chars
 
 #define HANDLER(name) static void name (TMT *vt) { COMMON_VARS; 
 
 struct TMT{
-    TMTPOINT curs;
-    TMTATTRS attrs;
+    TMTPOINT curs, oldcurs;
+    TMTATTRS attrs, oldattrs;
 
-    bool dirty;
+    bool dirty, acs, ignored;
     TMTSCREEN screen;
+    TMTLINE *tabs;
 
     TMTCALLBACK cb;
     void *p;
+    const wchar_t *acschars;
 
     mbstate_t ms;
     size_t nmb;
@@ -69,12 +74,29 @@ struct TMT{
 };
 
 static TMTATTRS defattrs = {.fg = TMT_COLOR_DEFAULT, .bg = TMT_COLOR_DEFAULT};
+static void writecharatcurs(TMT *vt, wchar_t w);
+
+static wchar_t
+tacs(const TMT *vt, unsigned char c)
+{
+    /* The terminfo alternate character set for ANSI. */
+    static unsigned char map[] = {0020U, 0021U, 0030U, 0031U, 0333U, 0004U,
+                                  0261U, 0370U, 0361U, 0260U, 0331U, 0277U,
+                                  0332U, 0300U, 0305U, 0176U, 0304U, 0304U,
+                                  0304U, 0137U, 0303U, 0264U, 0301U, 0302U,
+                                  0263U, 0363U, 0362U, 0343U, 0330U, 0234U,
+                                  0376U};
+    for (size_t i = 0; i < sizeof(map); i++) if (map[i] == c)
+        return vt->acschars[i];
+    return (wchar_t)c;
+}
 
 static void
 dirtylines(TMT *vt, size_t s, size_t e)
 {
+    vt->dirty = true;
     for (size_t i = s; i < e; i++)
-        vt->dirty = vt->screen.lines[i]->dirty = true;
+        vt->screen.lines[i]->dirty = true;
 }
 
 static void
@@ -82,7 +104,7 @@ clearline(TMT *vt, TMTLINE *l, size_t s, size_t e)
 {
     vt->dirty = l->dirty = true;
     for (size_t i = s; i < e && i < vt->screen.ncol; i++){
-        l->chars[i].a = vt->attrs;
+        l->chars[i].a = defattrs;
         l->chars[i].c = L' ';
     }
 }
@@ -147,10 +169,8 @@ HANDLER(ed)
 }
 
 HANDLER(ich)
-    size_t n = P1(0);
-
-    if (n > s->ncol - c->c - 1)
-        n = s->ncol - c->c - 1;
+    size_t n = P1(0); /* XXX use MAX */
+    if (n > s->ncol - c->c - 1) n = s->ncol - c->c - 1;
 
     memmove(l->chars + c->c + n, l->chars + c->c,
             MIN(s->ncol - 1 - c->c,
@@ -159,10 +179,8 @@ HANDLER(ich)
 }
 
 HANDLER(dch)
-    size_t n = P1(0);
-
-    if (n > s->ncol - c->c)
-        n = s->ncol - c->c;
+    size_t n = P1(0); /* XXX use MAX */
+    if (n > s->ncol - c->c) n = s->ncol - c->c;
 
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
@@ -180,33 +198,43 @@ HANDLER(el)
 
 HANDLER(sgr)
     #define FGBG(c) *(P0(i) < 40? &vt->attrs.fg : &vt->attrs.bg) = c
-    for (size_t i = 0; i < vt->npar; i++){
-        switch (P0(i)){
-            case  0: vt->attrs           = defattrs;   break;
-            case  1: vt->attrs.bold      = true;       break;
-            case  2: vt->attrs.dim       = true;       break;
-            case  4: vt->attrs.underline = true;       break;
-            case  5: vt->attrs.blink     = true;       break;
-            case  7: vt->attrs.reverse   = true;       break;
-            case  8: vt->attrs.invisible = true;       break;
-            case 24: vt->attrs.underline = false;      break;
-            case 27: vt->attrs.reverse   = false;      break;
-            case 30: case 40: FGBG(TMT_COLOR_BLACK);   break;
-            case 31: case 41: FGBG(TMT_COLOR_RED);     break;
-            case 32: case 42: FGBG(TMT_COLOR_GREEN);   break;
-            case 33: case 43: FGBG(TMT_COLOR_YELLOW);  break;
-            case 34: case 44: FGBG(TMT_COLOR_BLUE);    break;
-            case 35: case 45: FGBG(TMT_COLOR_MAGENTA); break;
-            case 36: case 46: FGBG(TMT_COLOR_CYAN);    break;
-            case 37: case 47: FGBG(TMT_COLOR_WHITE);   break;
-            case 39: case 48: FGBG(TMT_COLOR_DEFAULT); break;
-        }
+    for (size_t i = 0; i < vt->npar; i++) switch (P0(i)){
+        case  0: vt->attrs                    = defattrs;   break;
+        case  1: case 22: vt->attrs.bold      = P0(0) < 20; break;
+        case  2: case 23: vt->attrs.dim       = P0(0) < 20; break;
+        case  4: case 24: vt->attrs.underline = P0(0) < 20; break;
+        case  5: case 25: vt->attrs.blink     = P0(0) < 20; break;
+        case  7: case 27: vt->attrs.reverse   = P0(0) < 20; break;
+        case  8: case 28: vt->attrs.invisible = P0(0) < 20; break;
+        case 10: case 11: vt->acs             = P0(0) > 10; break;
+        case 30: case 40: FGBG(TMT_COLOR_BLACK);            break;
+        case 31: case 41: FGBG(TMT_COLOR_RED);              break;
+        case 32: case 42: FGBG(TMT_COLOR_GREEN);            break;
+        case 33: case 43: FGBG(TMT_COLOR_YELLOW);           break;
+        case 34: case 44: FGBG(TMT_COLOR_BLUE);             break;
+        case 35: case 45: FGBG(TMT_COLOR_MAGENTA);          break;
+        case 36: case 46: FGBG(TMT_COLOR_CYAN);             break;
+        case 37: case 47: FGBG(TMT_COLOR_WHITE);            break;
+        case 39: case 49: FGBG(TMT_COLOR_DEFAULT);          break;
     }
+}
+
+HANDLER(rep)
+    if (!c->c) return;
+    wchar_t r = l->chars[c->c - 1].c;
+    for (size_t i = c->c; i < P1(0); i++)
+        writecharatcurs(vt, r);
+}
+
+HANDLER(dsr)
+    char r[BUF_MAX + 1] = {0};
+    snprintf(r, BUF_MAX, "\033[%zd;%zdR", c->r, c->c);
+    CB(vt, TMT_MSG_ANSWER, (const char *)r);
 }
 
 HANDLER(resetparser)
     memset(vt->pars, 0, sizeof(vt->pars));
-    vt->state = vt->npar = vt->arg = 0;
+    vt->state = vt->npar = vt->arg = vt->ignored = (bool)0;
 }
 
 HANDLER(consumearg)
@@ -221,61 +249,60 @@ HANDLER(fixcursor)
 }
 
 static bool
-handlechar(TMT *vt, wchar_t w)
+handlechar(TMT *vt, char i)
 {
     COMMON_VARS;
 
-    if (w > UCHAR_MAX || w == 0)
-        return resetparser(vt), false;
+    char cs[] = {i, 0};
+    #define ON(S, C, A) if (vt->state == (S) && strchr(C, i)){ A; return true;}
+    #define DO(S, C, A) ON(S, C, consumearg(vt); if (!vt->ignored) {A;} \
+                                 fixcursor(vt); resetparser(vt););
 
-    #define SC(S, C) (((S) << CHAR_BIT) | (int)(C))
-    #define ON(S, C, A) case SC(S, C) : A ; return true
-    #define DO(S, C, A) case SC(S, C):do {                              \
-        consumearg(vt); A; fixcursor(vt); resetparser(vt); return true; \
-    } while (false)
-
-    switch (SC(vt->state, w)){
-        DO(S_NUL, 0x07, CB(vt, TMT_MSG_BELL, NULL));
-        DO(S_NUL, 0x08, if (c->c) c->c--);
-        DO(S_NUL, 0x09, for (int i = TAB - c->c % TAB; i > 0; i--) c->c++);
-        DO(S_NUL, 0x0a, c->r < s->nline - 1? (void)c->r++ : scrup(vt, 0, 1));
-        DO(S_NUL, 0x0d, c->c = 0);
-        ON(S_NUL, 0x1b, vt->state = S_ESC);
-        ON(S_ESC, 0x1b, vt->state = S_ESC);
-        ON(S_ESC, L'c', tmt_reset(vt));
-        ON(S_ESC, L'[', vt->state = S_ARG);
-        ON(S_ARG, 0x1b, vt->state = S_ESC);
-        ON(S_ARG, L';', consumearg(vt));
-        ON(S_ARG, L'?', vt->state = S_ARG);
-        ON(S_ARG, L'0', vt->arg = vt->arg * 10 + 0);
-        ON(S_ARG, L'1', vt->arg = vt->arg * 10 + 1);
-        ON(S_ARG, L'2', vt->arg = vt->arg * 10 + 2);
-        ON(S_ARG, L'3', vt->arg = vt->arg * 10 + 3);
-        ON(S_ARG, L'4', vt->arg = vt->arg * 10 + 4);
-        ON(S_ARG, L'5', vt->arg = vt->arg * 10 + 5);
-        ON(S_ARG, L'6', vt->arg = vt->arg * 10 + 6);
-        ON(S_ARG, L'7', vt->arg = vt->arg * 10 + 7);
-        ON(S_ARG, L'8', vt->arg = vt->arg * 10 + 8);
-        ON(S_ARG, L'9', vt->arg = vt->arg * 10 + 9);
-        DO(S_ARG, L'A', c->r = MAX(c->r - P1(0), 0));
-        DO(S_ARG, L'B', c->r = MIN(c->r + P1(0), s->nline - 1));
-        DO(S_ARG, L'C', c->c = MIN(c->c + P1(0), s->ncol - 1));
-        DO(S_ARG, L'D', c->c = MIN(c->c - P1(0), c->c));
-        DO(S_ARG, L'E', c->c = 0; c->r = MIN(c->r + P1(0), s->nline - 1));
-        DO(S_ARG, L'F', c->c = 0; c->r = MAX(c->r - P1(0), 0));
-        DO(S_ARG, L'G', c->c = MIN(P1(1), s->ncol - 1));
-        DO(S_ARG, L'H', c->r = P1(0) - 1; c->c = P1(1) - 1);
-        DO(S_ARG, L'J', ed(vt));
-        DO(S_ARG, L'K', el(vt));
-        DO(S_ARG, L'L', scrdn(vt, c->r, P1(0)));
-        DO(S_ARG, L'M', scrup(vt, c->r, P1(0)));
-        DO(S_ARG, L'P', dch(vt));
-        DO(S_ARG, L'S', scrup(vt, 0, P1(0)));
-        DO(S_ARG, L'T', scrdn(vt, 0, P1(0)));
-        DO(S_ARG, L'X', clearline(vt, l, c->c, P1(0)));
-        DO(S_ARG, L'm', sgr(vt));
-        DO(S_ARG, L'@', ich(vt));
-    }
+    DO(S_NUL, "\x07",       CB(vt, TMT_MSG_BELL, NULL))
+    DO(S_NUL, "\x08",       if (c->c) c->c--)
+    DO(S_NUL, "\x09",       while (++c->c < s->ncol - 1 && t[c->c].c != L'*'))
+    DO(S_NUL, "\x0a",       c->r < s->nline - 1? (void)c->r++ : scrup(vt, 0, 1))
+    DO(S_NUL, "\x0d",       c->c = 0)
+    ON(S_NUL, "\x1b",       vt->state = S_ESC)
+    ON(S_ESC, "\x1b",       vt->state = S_ESC)
+    DO(S_ESC, "H",          t[c->c].c = L'*')
+    DO(S_ESC, "7",          vt->oldcurs = vt->curs; vt->oldattrs = vt->attrs)
+    DO(S_ESC, "8",          vt->curs = vt->oldcurs; vt->attrs = vt->oldattrs)
+    ON(S_ESC, "+*()",       vt->ignored = true; vt->state = S_ARG)
+    DO(S_ESC, "c",          tmt_reset(vt))
+    ON(S_ESC, "[",          vt->state = S_ARG)
+    ON(S_ARG, "\x1b",       vt->state = S_ESC)
+    ON(S_ARG, ";",          consumearg(vt))
+    ON(S_ARG, "?",          (void)0)
+    ON(S_ARG, "0123456789", vt->arg = vt->arg * 10 + atoi(cs))
+    DO(S_ARG, "A",          c->r = MAX(c->r - P1(0), 0))
+    DO(S_ARG, "B",          c->r = MIN(c->r + P1(0), s->nline - 1))
+    DO(S_ARG, "C",          c->c = MIN(c->c + P1(0), s->ncol - 1))
+    DO(S_ARG, "D",          c->c = MIN(c->c - P1(0), c->c))
+    DO(S_ARG, "E",          c->c = 0; c->r = MIN(c->r + P1(0), s->nline - 1))
+    DO(S_ARG, "F",          c->c = 0; c->r = MAX(c->r - P1(0), 0))
+    DO(S_ARG, "G",          c->c = MIN(P1(0) - 1, s->ncol - 1))
+    DO(S_ARG, "d",          c->r = MIN(P1(0) - 1, s->nline - 1))
+    DO(S_ARG, "Hf",         c->r = P1(0) - 1; c->c = P1(1) - 1)
+    DO(S_ARG, "I",          while (++c->c < s->ncol - 1 && t[c->c].c != L'*'))
+    DO(S_ARG, "J",          ed(vt))
+    DO(S_ARG, "K",          el(vt))
+    DO(S_ARG, "L",          scrdn(vt, c->r, P1(0)))
+    DO(S_ARG, "M",          scrup(vt, c->r, P1(0)))
+    DO(S_ARG, "P",          dch(vt))
+    DO(S_ARG, "S",          scrup(vt, 0, P1(0)))
+    DO(S_ARG, "T",          scrdn(vt, 0, P1(0)))
+    DO(S_ARG, "X",          clearline(vt, l, c->c, P1(0)))
+    DO(S_ARG, "Z",          while (c->c && t[--c->c].c != L'*'))
+    DO(S_ARG, "b",          rep(vt));
+    DO(S_ARG, "c",          CB(vt, TMT_MSG_ANSWER, "\033[?6c"))
+    DO(S_ARG, "g",          if (P0(0) == 3) clearline(vt, vt->tabs, 0, s->ncol))
+    DO(S_ARG, "m",          sgr(vt))
+    DO(S_ARG, "n",          if (P0(0) == 6) dsr(vt))
+    DO(S_ARG, "i",          (void)0)
+    DO(S_ESC, "s",          vt->oldcurs = vt->curs; vt->oldattrs = vt->attrs)
+    DO(S_ESC, "u",          vt->curs = vt->oldcurs; vt->attrs = vt->oldattrs)
+    DO(S_ARG, "@",          ich(vt))
 
     return resetparser(vt), false;
 }
@@ -291,8 +318,7 @@ static TMTLINE *
 allocline(TMT *vt, TMTLINE *o, size_t n, size_t pc)
 {
     TMTLINE *l = realloc(o, sizeof(TMTLINE) + n * sizeof(TMTCHAR));
-    if (!l)
-        return NULL;
+    if (!l) return NULL;
 
     clearline(vt, l, pc, n);
     return l;
@@ -306,29 +332,29 @@ freelines(TMT *vt, size_t s, size_t n, bool screen)
         vt->screen.lines[i] = NULL;
     }
 
-    if (screen)
-        free(vt->screen.lines);
+    if (screen) free(vt->screen.lines);
 }
 
 TMT *
-tmt_open(size_t nline, size_t ncol, TMTCALLBACK cb, void *p)
+tmt_open(size_t nline, size_t ncol, TMTCALLBACK cb, void *p,
+         const wchar_t *acs)
 {
     TMT *vt = calloc(1, sizeof(TMT));
-    if (!nline || !ncol || !vt)
-        return free(vt), NULL;
+    if (!nline || !ncol || !vt) return free(vt), NULL;
 
+    /* ASCII-safe defaults for box-drawing characters. */
+    vt->acschars = acs? acs : L"><^v#+:o##+++++~---_++++|<>*!fo";
     vt->cb = cb;
     vt->p = p;
 
-    if (!tmt_resize(vt, nline, ncol))
-        return tmt_close(vt), NULL;
-
+    if (!tmt_resize(vt, nline, ncol)) return tmt_close(vt), NULL;
     return vt;
 }
 
 void
 tmt_close(TMT *vt)
 {
+    free(vt->tabs);
     freelines(vt, 0, vt->screen.nline, true);
     free(vt);
 }
@@ -360,6 +386,12 @@ tmt_resize(TMT *vt, size_t nline, size_t ncol)
     }
     vt->screen.nline = nline;
 
+    vt->tabs = allocline(vt, vt->tabs, ncol, 0);
+    if (!vt->tabs) return free(l), false;
+    vt->tabs->chars[0].c = vt->tabs->chars[ncol - 1].c = L'*';
+    for (size_t i = 0; i < ncol; i++) if (i % TAB == 0)
+        vt->tabs->chars[i].c = L'*';
+
     fixcursor(vt);
     dirtylines(vt, 0, nline);
     notify(vt, true, true);
@@ -367,23 +399,22 @@ tmt_resize(TMT *vt, size_t nline, size_t ncol)
 }
 
 static void
-writecharatcursor(TMT *vt, wchar_t w)
+writecharatcurs(TMT *vt, wchar_t w)
 {
     COMMON_VARS;
 
-    int nc = 1;
     #ifdef TMT_HAS_WCWIDTH
-    int wcwidth(wchar_t c);
-    if ((nc = wcwidth(w)) <= 0)
-        return;
+    extern int wcwidth(wchar_t c);
+    if (wcwidth(w) > 1)  w = TMT_INVALID_CHAR;
+    if (wcwidth(w) == 0) return;
     #endif
 
     CLINE(vt)->chars[vt->curs.c].c = w;
     CLINE(vt)->chars[vt->curs.c].a = vt->attrs;
     CLINE(vt)->dirty = vt->dirty = true;
 
-    if (c->c < s->ncol - nc)
-        c->c += nc;
+    if (c->c < s->ncol - 1)
+        c->c++;
     else{
         c->c = 0;
         c->r++;
@@ -395,18 +426,6 @@ writecharatcursor(TMT *vt, wchar_t w)
     }
 }
 
-void
-tmt_write(TMT *vt, const wchar_t *w, size_t n)
-{
-    TMTPOINT oc = vt->curs;
-    n = n? n : wcslen(w);
-
-    for (size_t i = 0; i < n; i++) if (!handlechar(vt, w[i]))
-        writecharatcursor(vt, w[i]);
-
-    notify(vt, vt->dirty, memcmp(&oc, &vt->curs, sizeof(oc)) != 0);
-}
-
 static inline size_t
 testmbchar(TMT *vt)
 {
@@ -414,40 +433,40 @@ testmbchar(TMT *vt)
     return vt->nmb? mbrtowc(NULL, vt->mb, vt->nmb, &ts) : (size_t)-2;
 }
 
-static inline void
-writembchar(TMT *vt, wchar_t *c)
+static inline wchar_t
+getmbchar(TMT *vt)
 {
-    mbrtowc(c, vt->mb, vt->nmb, &vt->ms);
+    wchar_t c = 0;
+    size_t n = mbrtowc(&c, vt->mb, vt->nmb, &vt->ms);
     vt->nmb = 0;
+    return (n == (size_t)-1 || n == (size_t)-2)? TMT_INVALID_CHAR : c;
 }
 
 void
-tmt_writemb(TMT *vt, const char *s, size_t n)
+tmt_write(TMT *vt, const char *s, size_t n)
 {
-    size_t nw = 0, p = 0, nb = 0;
-    wchar_t buf[BUF_MAX + 1] = {0};
+    TMTPOINT oc = vt->curs;
     n = n? n : strlen(s);
 
-    while (p < n && vt->nmb < BUF_MAX){
-        switch (testmbchar(vt)){
-            case (size_t)-1: buf[nw++] = TMT_INVALID_CHAR; vt->nmb = 0; break;
-            case (size_t)-2: vt->mb[vt->nmb++] = s[p++];                break;
-            default: writembchar(vt, buf + nw++);                       break;
-        }
+    for (size_t p = 0; p < n; p++){
+        if (handlechar(vt, s[p]))
+            continue;
+        else if (vt->acs)
+            writecharatcurs(vt, tacs(vt, (unsigned char)s[p]));
+        else if (vt->nmb >= BUF_MAX)
+            writecharatcurs(vt, getmbchar(vt));
+        else{
+            switch (testmbchar(vt)){
+                case (size_t)-1: writecharatcurs(vt, getmbchar(vt)); break;
+                case (size_t)-2: vt->mb[vt->nmb++] = s[p];           break;
+            }
 
-        if (nw >= BUF_MAX){
-            tmt_write(vt, buf, nw);
-            nw = 0;
-            wmemset(buf, 0, BUF_MAX + 1);
+            if (testmbchar(vt) <= MB_LEN_MAX)
+                writecharatcurs(vt, getmbchar(vt));
         }
     }
-    tmt_write(vt, buf, nw);
 
-    nb = testmbchar(vt); /* we might've finished a char on the last byte */
-    if (nb && nb != (size_t)-1 && nb != (size_t)-2){
-        writembchar(vt, buf);
-        tmt_write(vt, buf, 1);
-    }
+    notify(vt, vt->dirty, memcmp(&oc, &vt->curs, sizeof(oc)) != 0);
 }
 
 const TMTSCREEN *
@@ -465,24 +484,17 @@ tmt_cursor(const TMT *vt)
 void
 tmt_clean(TMT *vt)
 {
-    vt->dirty = false;
     for (size_t i = 0; i < vt->screen.nline; i++)
-        vt->screen.lines[i]->dirty = false;
+        vt->dirty = vt->screen.lines[i]->dirty = false;
 }
 
 void
 tmt_reset(TMT *vt)
 {
-    vt->curs.r = vt->curs.c = 0;
+    vt->curs.r = vt->curs.c = vt->oldcurs.r = vt->oldcurs.c = vt->acs = (bool)0;
     resetparser(vt);
-    vt->attrs = defattrs;
+    vt->attrs = vt->oldattrs = defattrs;
     memset(&vt->ms, 0, sizeof(vt->ms));
     clearlines(vt, 0, vt->screen.nline);
     notify(vt, true, true);
-}
-
-bool
-tmt_dirty(const TMT *vt)
-{
-    return vt->dirty;
 }
