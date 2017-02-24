@@ -15,12 +15,6 @@ is a terminal multiplexer,
 a program that allows multiple terminal sessions to run within a single
 (physical or virtual)
 terminal session.
-.Nm
-emulates a collection of
-.Em mach
-or
-.Em mach-color
-terminals.
 .Pp
 The options are
 .Bl -tag -width Ds
@@ -31,8 +25,8 @@ By default,
 .Nm
 will run in color mode.
 .It Fl u
-Use Unicode box drawing characters;
-this should be specified only if your system's wide-character type corresponds to Unicode.
+Use Unicode box drawing characters.
+Note that this option has no effect if your system does not support rendering such characters.
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER
@@ -136,8 +130,6 @@ and will finally use
 .Sh SEE ALSO
 .Xr sh 1
 .Sh BUGS
-.Pp
-Rendering of double-width characters will sometimes corrupt the display.
 .Pp
 .Nm
 will attempt to fit all virtual terminals in the window at once.

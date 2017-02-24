@@ -10,9 +10,10 @@ Simplicity
     modes, no dozens of commands, no crazy feature list.
 
 Compatibility
-    mtm emulates an existing, well-known terminal type.  That means it
-    should work out of the box on essentially all termcap-based systems,
-    even pretty old ones, without needing to install a new termcap entry.
+    mtm emulates the common terminfo database's `ansi` terminal type.
+    That means it should work out of the box on essentially all
+    terminfo/termcap-based systems (even pretty old ones), without needing
+    to install a new termcap entry.
 
 Size
     mtm is 500 lines of C, including whitespace and comments.
@@ -63,43 +64,44 @@ Compatibility
 =============
 
 One nice thing about mtm is that it emulates (accurately) an existing
-terminal type that is widely supported: `mach` and/or `mach-color`.
-This terminal emulation is actually implemented as a library, called
-`libtmt`_, that you may find useful.
+terminal type that is widely supported.  This terminal emulation is actually
+implemented as a library, called `libtmt`_, that you may find useful.
+
+This emulation is tested using the `tack` utility and passes all standard
+tests. Additionally, it has been moderately fuzz-tested
+(approximately 35 million random escape sequences and screenfulls of text)
+and no problems have been discovered.
+
+**Note that this does not mean mtm is bug-free!**
+No software is.
+However, there are no *known* bugs in mtm's terminal emulation.
 
 This means that mtm will work out-of-the-box on most systems, at least
-terminal-emulation-wise.  There is generally no need to install a new
-termcap definition (assuming your existing termcap database has entries for
-`mach`/`mach-color`; most have for the past twenty years).
+terminal-emulation-wise.
 
 .. _`libtmt`: https://github.com/deadpixi/libtmt
 
-Anything that uses termcap/terminfo or (n)curses should "just work"
-with mtm.  mtm does not, however, support some features that some programs
-want (and neither did the original `mach`/`mach-color` console).  The only
-user-visible features that might be missed are terminal-title setting and
-mouse support.  If you need those, mtm will not work for you, sorry.
-
-Note that mtm also intentionally breaks compatibilty with the `mach`
-console by rendering blinking text as bold instead.  This is because nobody
-likes blinking text, and it can actually be dangerous for some people with
-epilepsy and other conditions.
+Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
+mtm does not, however, support some features that some programs want. The
+only user-visible features that might be missed are terminal-title setting
+and mouse support.  If you need those, mtm will not work for you, sorry.
 
 Usage
 =====
 
 Usage is simple::
 
-    mtm [-m] [-c KEY] [-e MILLISECONDS]
+    mtm [-mu] [-c KEY]
 
 The `-m` flag puts mtm in monochrome mode.
+
+The `-u` flag instructs mtm to use Unicode box-drawing characters.
+Note that if your system/compiler doesn't support Unicode,
+this option will have no effect.
 
 The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
 this is `g`.
-
-The `-e` flag specifies how long mtm will wait after seeing an escape
-character to see if it's the beginning of a special sequence.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
 mtm lets you split up the terminal into multiple virtual terminals.
