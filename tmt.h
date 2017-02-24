@@ -47,7 +47,6 @@
 #define TMT_KEY_INSERT         "\033[L"
 #define TMT_KEY_BACKSPACE      "\x08"
 #define TMT_KEY_ESCAPE         "\x1b"
-#define TMT_KEY_TAB            "\x09"
 #define TMT_KEY_BACK_TAB       "\033[Z"
 #define TMT_KEY_PAGE_UP        "\033[V"
 #define TMT_KEY_PAGE_DOWN      "\033[U"
