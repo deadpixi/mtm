@@ -142,14 +142,12 @@ fixcursor(void)
 void
 callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
 {
+    const char *a = (const char *)r;
     switch (m){
-        case TMT_MSG_UPDATE:  drawview((NODE *)p, false); break;
-        case TMT_MSG_MOVED:   /* ignored */               break;
-        case TMT_MSG_BELL:    beep();                     break;
-        case TMT_MSG_ANSWER:{
-            const char *a = (const char *)r;
-            safewrite(((NODE *)p)->pt, a, strlen(a));
-        }
+        case TMT_MSG_UPDATE: drawview((NODE *)p, false);               break;
+        case TMT_MSG_MOVED:  /* ignored */                             break;
+        case TMT_MSG_BELL:   beep();                                   break;
+        case TMT_MSG_ANSWER: safewrite(((NODE *)p)->pt, a, strlen(a)); break;
     }
 }
 
@@ -383,10 +381,8 @@ getinput(NODE *n, fd_set *f)
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
             tmt_write(n->vt, iobuf, r);
-        else if (r < 0){
-            if (errno != EINTR && errno != EWOULDBLOCK)
-                return deletenode(n), false;
-        }
+        else if (r < 0 && errno != EINTR && errno != EWOULDBLOCK)
+            return deletenode(n), false;
     }
     return true;
 }
@@ -396,7 +392,6 @@ handlechar(int k)
 {
     #define WRITESTR(s) safewrite(focused->pt, s, strlen(s))
     #define DO(s, i, a) if (s == cmd && i == k) { a ; cmd = false; return true;}
-
     DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   ERR,           return false)
     DO(cmd,   commandkey,    return cmd = !cmd)
@@ -479,7 +474,6 @@ main(int argc, char **argv)
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN);
-
     int c = 0;
     while ((c = getopt(argc, argv, "umc:")) != -1){
         switch (c){
