@@ -165,7 +165,7 @@ newview(NODE *p, int y, int x, int h, int w)
     nodelay(n->win, TRUE);
     if (!n->win) return freenode(n, false), NULL;
 
-    n->vt = tmt_open(h, w, callback, n, NULL);
+    n->vt = tmt_open(h, w, callback, n, unicode? ACS : NULL);
     if (!n) return freenode(n, false), NULL;
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
