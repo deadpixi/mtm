@@ -38,6 +38,10 @@ The Obiligatory Screenshot
 
 .. image:: screenshot.png
 
+The Second Screenshot, Showing Off Colors and Alternate Character Set Support
+-----------------------------------------------------------------------------
+.. image:: screenshot2.png
+
 Community
 =========
 
