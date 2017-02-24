@@ -401,6 +401,7 @@ handlechar(int k)
     DO(false, KEY_LEFT,      WRITESTR(TMT_KEY_LEFT))
     DO(false, KEY_RIGHT,     WRITESTR(TMT_KEY_RIGHT))
     DO(false, KEY_BACKSPACE, WRITESTR(TMT_KEY_BACKSPACE))
+    DO(false, KEY_BTAB,      WRITESTR(TMT_KEY_BACK_TAB))
     DO(false, KEY_F(1),      WRITESTR(TMT_KEY_F1))
     DO(false, KEY_F(2),      WRITESTR(TMT_KEY_F2))
     DO(false, KEY_F(3),      WRITESTR(TMT_KEY_F3))
@@ -423,7 +424,6 @@ handlechar(int k)
     DO(true,  VSPLIT,        split(focused, VERTICAL))
     DO(true,  DELETE_NODE,   deletenode(focused))
     DO(true,  REDRAW,        erase(); draw(root, true))
-
     char c[] = {(char)k, 0};
     WRITESTR(c);
     return true;
