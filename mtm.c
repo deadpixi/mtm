@@ -32,7 +32,7 @@
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-m] [-c KEY]"
+#define USAGE "usage: mtm [-mu] [-c KEY]"
 
 typedef enum{
     HORIZONTAL,
@@ -143,9 +143,13 @@ void
 callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
 {
     switch (m){
-        case TMT_MSG_UPDATE: drawview((NODE *)p, false); break;
-        case TMT_MSG_MOVED:  /* ignored */               break;
-        case TMT_MSG_BELL:   beep();                     break;
+        case TMT_MSG_UPDATE:  drawview((NODE *)p, false); break;
+        case TMT_MSG_MOVED:   /* ignored */               break;
+        case TMT_MSG_BELL:    beep();                     break;
+        case TMT_MSG_ANSWER:{
+            const char *a = (const char *)r;
+            safewrite(((NODE *)p)->pt, a, strlen(a));
+        }
     }
 }
 
@@ -161,7 +165,7 @@ newview(NODE *p, int y, int x, int h, int w)
     nodelay(n->win, TRUE);
     if (!n->win) return freenode(n, false), NULL;
 
-    n->vt = tmt_open(h, w, callback, n);
+    n->vt = tmt_open(h, w, callback, n, NULL);
     if (!n) return freenode(n, false), NULL;
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
@@ -170,7 +174,7 @@ newview(NODE *p, int y, int x, int h, int w)
     else if (pid == 0){
         setsid();
         if (unicode) setenv("NCURSES_NO_UTF8_ACS", "1", 1);
-        setenv("TERM", monochrome? "mach" : "mach-color", 1);
+        setenv("TERM", "ansi", 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
@@ -378,7 +382,7 @@ getinput(NODE *n, fd_set *f)
     if (n && n->pt >= 0 && FD_ISSET(n->pt, f)){
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
-            tmt_writemb(n->vt, iobuf, r);
+            tmt_write(n->vt, iobuf, r);
         else if (r < 0){
             if (errno != EINTR && errno != EWOULDBLOCK)
                 return deletenode(n), false;
