@@ -23,3 +23,10 @@
 
 /* The force redraw key. */
 #define REDRAW 'l'
+
+/* The preferred alternate character set. */
+#ifdef __STDC_ISO_10646__ /* System supports Unicode. */
+#define ACS L"→←↑↓■◆▒°±▒┘┐┌└┼⎺───⎽├┤┴┬│≤≥π≠£•"
+#else
+#define ACS NULL /* Use TMT's built-in ASCII-safe ACS. */
+#endif
