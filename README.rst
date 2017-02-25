@@ -73,7 +73,7 @@ implemented as a library, called `libtmt`_, that you may find useful.
 
 This emulation is tested using the `tack` utility and passes all standard
 tests. Additionally, it has been moderately fuzz-tested
-(approximately 35 million random escape sequences and screenfulls of text)
+(approximately 350 million random escape sequences and screenfulls of text)
 and no problems have been discovered.
 
 **Note that this does not mean mtm is bug-free!**
