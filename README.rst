@@ -88,7 +88,8 @@ terminal-emulation-wise.
 Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
 mtm does not, however, support some features that some programs want. The
 only user-visible features that might be missed are terminal-title setting
-and mouse support.  If you need those, mtm will not work for you, sorry.
+and mouse support.  If you need those, mtm will not work for you, sorry
+(and neither would any pure "ansi" terminal).
 
 Usage
 =====
