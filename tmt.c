@@ -222,7 +222,7 @@ HANDLER(sgr)
 HANDLER(rep)
     if (!c->c) return;
     wchar_t r = l->chars[c->c - 1].c;
-    for (size_t i = c->c; i < P1(0); i++)
+    for (size_t i = c->c; i <= P1(0); i++)
         writecharatcurs(vt, r);
 }
 
