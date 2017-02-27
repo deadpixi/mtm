@@ -333,7 +333,6 @@ freelines(TMT *vt, size_t s, size_t n, bool screen)
         free(vt->screen.lines[i]);
         vt->screen.lines[i] = NULL;
     }
-
     if (screen) free(vt->screen.lines);
 }
 
@@ -406,7 +405,7 @@ writecharatcurs(TMT *vt, wchar_t w)
     #ifdef TMT_HAS_WCWIDTH
     extern int wcwidth(wchar_t c);
     if (wcwidth(w) > 1)  w = TMT_INVALID_CHAR;
-    if (wcwidth(w) == 0) return;
+    if (wcwidth(w) < 0) return;
     #endif
 
     CLINE(vt)->chars[vt->curs.c].c = w;
@@ -496,5 +495,6 @@ tmt_reset(TMT *vt)
     vt->attrs = vt->oldattrs = defattrs;
     memset(&vt->ms, 0, sizeof(vt->ms));
     clearlines(vt, 0, vt->screen.nline);
+    CB(vt, TMT_MSG_CURSOR, "t");
     notify(vt, true, true);
 }
