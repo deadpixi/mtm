@@ -148,6 +148,7 @@ callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
         case TMT_MSG_MOVED:  /* ignored */                             break;
         case TMT_MSG_BELL:   beep();                                   break;
         case TMT_MSG_ANSWER: safewrite(((NODE *)p)->pt, a, strlen(a)); break;
+        case TMT_MSG_CURSOR: curs_set(a && a[0] == 't');               break;
     }
 }
 
