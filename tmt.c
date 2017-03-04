@@ -180,12 +180,12 @@ HANDLER(ich)
 
 HANDLER(dch)
     size_t n = P1(0); /* XXX use MAX */
-    if (n > s->ncol - c->c) n = s->ncol - c->c;
+    if (n > s->ncol - c->c) n = s->ncol - c->c + 1;
 
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
 
-    clearline(vt, l, s->ncol - c->c - n, s->ncol);
+    clearline(vt, l, c->c, n - 1);
 }
 
 HANDLER(el)
