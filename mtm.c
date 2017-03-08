@@ -321,7 +321,6 @@ static void
 drawview(NODE *n, bool force)
 {
     if (!n->vt) return;
-
     const TMTSCREEN *s = tmt_screen(n->vt);
     for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
         for (size_t c = 0; c < s->ncol; c++)
@@ -361,6 +360,7 @@ split(NODE *n, node_t t)
     NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v) return;
 
+    wclear(n->win); wrefresh(n->win);
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
         freenode(v, false);
@@ -423,7 +423,7 @@ handlechar(int k)
     DO(true,  HSPLIT,        split(focused, HORIZONTAL))
     DO(true,  VSPLIT,        split(focused, VERTICAL))
     DO(true,  DELETE_NODE,   deletenode(focused))
-    DO(true,  REDRAW,        erase(); draw(root, true))
+    DO(true,  REDRAW,        draw(root, true))
     char c[] = {(char)k, 0};
     WRITESTR(c);
     return cmd = false, true;
