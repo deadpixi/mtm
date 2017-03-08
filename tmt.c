@@ -183,7 +183,7 @@ HANDLER(dch)
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
 
-    clearline(vt, l, s->ncol - c->c - n, s->ncol);
+    clearline(vt, l, s->ncol - n, s->ncol);
 }
 
 HANDLER(el)
