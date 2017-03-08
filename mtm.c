@@ -426,7 +426,7 @@ handlechar(int k)
     DO(true,  REDRAW,        erase(); draw(root, true))
     char c[] = {(char)k, 0};
     WRITESTR(c);
-    return true;
+    return cmd = false, true;
 }
 
 static void
