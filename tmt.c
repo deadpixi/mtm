@@ -169,8 +169,7 @@ HANDLER(ed)
 }
 
 HANDLER(ich)
-    size_t n = P1(0); /* XXX use MAX */
-    if (n > s->ncol - c->c - 1) n = s->ncol - c->c - 1;
+    size_t n = MIN(P1(0), s->ncol - c->c - 1);
 
     memmove(l->chars + c->c + n, l->chars + c->c,
             MIN(s->ncol - 1 - c->c,
@@ -179,8 +178,7 @@ HANDLER(ich)
 }
 
 HANDLER(dch)
-    size_t n = P1(0); /* XXX use MAX */
-    if (n > s->ncol - c->c) n = s->ncol - c->c;
+    size_t n = MIN(P1(0), s->ncol - c->c);
 
     memmove(l->chars + c->c, l->chars + c->c + n,
             (s->ncol - c->c - n) * sizeof(TMTCHAR));
@@ -292,7 +290,7 @@ handlechar(TMT *vt, char i)
     DO(S_ARG, "P",          dch(vt))
     DO(S_ARG, "S",          scrup(vt, 0, P1(0)))
     DO(S_ARG, "T",          scrdn(vt, 0, P1(0)))
-    DO(S_ARG, "X",          clearline(vt, l, c->c, P1(0)))
+    DO(S_ARG, "X",          clearline(vt, l, c->c, c->c + P1(0)))
     DO(S_ARG, "Z",          while (c->c && t[--c->c].c != L'*'))
     DO(S_ARG, "b",          rep(vt));
     DO(S_ARG, "c",          CB(vt, TMT_MSG_ANSWER, "\033[?6c"))
