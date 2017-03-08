@@ -16,7 +16,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <locale.h>
-#include <pty.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -25,10 +24,9 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include NCURSESW_INCLUDE_H
 
-#include "tmt.h"
 #include "config.h"
+#include "tmt.h"
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
@@ -143,6 +141,7 @@ void
 callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
 {
     const char *a = (const char *)r;
+    (void)v; /* avoid a compiler warning */
     switch (m){
         case TMT_MSG_UPDATE: drawview((NODE *)p, false);               break;
         case TMT_MSG_MOVED:  /* ignored */                             break;

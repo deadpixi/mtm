@@ -25,8 +25,30 @@
 #define REDRAW 'l'
 
 /* The preferred alternate character set. */
-#ifdef __STDC_ISO_10646__ /* System supports Unicode. */
-#define ACS L"→←↑↓■◆▒°±▒┘┐┌└┼⎺───⎽├┤┴┬│≤≥π≠£•"
-#else
-#define ACS NULL /* Use TMT's built-in ASCII-safe ACS. */
+#ifndef ACS
+    #ifdef __STDC_ISO_10646__ /* System supports Unicode. */
+        #define ACS L"→←↑↓■◆▒°±▒┘┐┌└┼⎺───⎽├┤┴┬│≤≥π≠£•"
+    #else
+        #define ACS NULL /* Use TMT's built-in ASCII-safe ACS. */
+    #endif
 #endif
+
+/* The path for the wide-character curses library. */
+#ifndef NCURSESW_INCLUDE_H
+    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux))
+        #define NCURSESW_INCLUDE_H <curses.h>
+    #else
+        #define NCURSESW_INCLUDE_H <ncursesw/curses.h>
+    #endif
+#endif
+#include NCURSESW_INCLUDE_H
+
+/* Includes needed to make forkpty(3) work. */
+#ifndef FORKPTY_INCLUDE_H
+    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux__))
+        #define FORKPTY_INCLUDE_H <util.h>
+    #else
+        #define FORKPTY_INCLUDE_H <pty.h>
+    #endif
+#endif
+#include FORKPTY_INCLUDE_H
