@@ -68,20 +68,11 @@ Compatibility
 =============
 
 One nice thing about mtm is that it emulates (accurately) an existing
-terminal type that is widely supported.  This terminal emulation is actually
-implemented as a library, called `libtmt`_, that you may find useful.
+terminal type that is widely supported.  This means that mtm will work
+out-of-the-box on most systems, at least terminal-emulation-wise.
 
-This emulation is tested using the `tack` utility and passes all standard
-tests. Additionally, it has been moderately fuzz-tested
-(approximately 350 million random escape sequences and screenfulls of text)
-and no problems have been discovered.
-
-**Note that this does not mean mtm is bug-free!**
-No software is.
-However, there are no *known* bugs in mtm's terminal emulation.
-
-This means that mtm will work out-of-the-box on most systems, at least
-terminal-emulation-wise.
+This terminal emulation is actually implemented as a library, called
+`libtmt`_, that you may find useful.
 
 .. _`libtmt`: https://github.com/deadpixi/libtmt
 
