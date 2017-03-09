@@ -61,7 +61,7 @@ Installation and configuration is fairly simple:
 - If you want to change the default keybindings, copy `config.def.h`
   to `config.h` and edit the copy. Otherwise the build process will
   use the default.
-- Run `make`.
+- Run `make` or `make CURSESLIB=curses`, whichever works for you.
 - Run `make install` if desired.
 
 Compatibility
