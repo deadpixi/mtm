@@ -1,10 +1,11 @@
-CC       := gcc
-CFLAGS   ?= -O3 -std=c99 -Wall -Wextra -pedantic
-FEATURES ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED -DTMT_HAS_WCWIDTH
-HEADERS  ?=
-LIBPATH  ?=
-DESTDIR  ?= /usr/local
-LIBS     ?= -lncursesw -lutil
+CC        := gcc
+CFLAGS    ?= -O3 -std=c99 -Wall -Wextra -pedantic
+FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED -DTMT_HAS_WCWIDTH
+HEADERS   ?=
+LIBPATH   ?=
+DESTDIR   ?= /usr/local
+CURSESLIB ?= ncursesw
+LIBS      ?= -l$(CURSESLIB) -lutil
 
 all: mtm
 
