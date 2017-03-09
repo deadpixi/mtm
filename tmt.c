@@ -43,11 +43,13 @@
 #define CB(vt, m, a) ((vt)->cb? (vt)->cb(m, vt, a, (vt)->p) : (void)0)
 #define INESC ((vt)->state)
 
-#define COMMON_VARS                        \
-    TMTSCREEN *s = &vt->screen;   (void)s; \
-    TMTPOINT *c = &vt->curs;      (void)c; \
-    TMTLINE *l = CLINE(vt);       (void)l; \
-    TMTCHAR *t = vt->tabs->chars; (void)t
+#define COMMON_VARS                             \
+    TMTSCREEN *s = &vt->screen;   (void)s;      \
+    TMTPOINT *c = &vt->curs;      (void)c;      \
+    TMTLINE *l = CLINE(vt);       (void)l;      \
+    TMTCHAR *t = vt->tabs->chars; (void)t;      \
+    size_t ncol = s->ncol;        (void)ncol;   \
+    size_t nline = s->nline;      (void)nline
 
 #define HANDLER(name) static void name (TMT *vt) { COMMON_VARS; 
 
@@ -95,7 +97,7 @@ static void
 dirtylines(TMT *vt, size_t s, size_t e)
 {
     vt->dirty = true;
-    for (size_t i = s; i < e; i++)
+    for (size_t i = s; i < e && i < vt->screen.nline; i++)
         vt->screen.lines[i]->dirty = true;
 }
 
@@ -120,7 +122,6 @@ static void
 scrup(TMT *vt, size_t r, size_t n)
 {
     n = MIN(n, vt->screen.nline - 1 - r);
-
     if (n){
         TMTLINE *buf[n];
 
@@ -139,7 +140,6 @@ static void
 scrdn(TMT *vt, size_t r, size_t n)
 {
     n = MIN(n, vt->screen.nline - 1 - r);
-
     if (n){
         TMTLINE *buf[n];
 
@@ -256,6 +256,7 @@ handlechar(TMT *vt, char i)
     #define DO(S, C, A) ON(S, C, consumearg(vt); if (!vt->ignored) {A;} \
                                  fixcursor(vt); resetparser(vt););
 
+    DO(S_NUL, "\x05",       CB(vt, TMT_MSG_ANSWER, "\x06"))
     DO(S_NUL, "\x07",       CB(vt, TMT_MSG_BELL, NULL))
     DO(S_NUL, "\x08",       if (c->c) c->c--)
     DO(S_NUL, "\x09",       while (++c->c < s->ncol - 1 && t[c->c].c != L'*'))
@@ -406,19 +407,19 @@ writecharatcurs(TMT *vt, wchar_t w)
     if (wcwidth(w) < 0) return;
     #endif
 
-    CLINE(vt)->chars[vt->curs.c].c = w;
-    CLINE(vt)->chars[vt->curs.c].a = vt->attrs;
-    CLINE(vt)->dirty = vt->dirty = true;
+    l->chars[c->c].c = w;
+    l->chars[c->c].a = vt->attrs;
+    vt->dirty = l->dirty = true;
 
-    if (c->c < s->ncol - 1)
+    if (c->c < ncol - 1)
         c->c++;
     else{
         c->c = 0;
         c->r++;
     }
 
-    if (c->r >= s->nline){
-        c->r = s->nline - 1;
+    if (c->r >= nline){
+        c->r = nline - 1;
         scrup(vt, 0, 1);
     }
 }
