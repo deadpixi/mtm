@@ -324,7 +324,7 @@ drawview(NODE *n, bool force)
     const TMTSCREEN *s = tmt_screen(n->vt);
     for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
         for (size_t c = 0; c < s->ncol; c++)
-            mvwadd_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
+            mvwins_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
     }
     tmt_clean(n->vt);
     wnoutrefresh(n->win);
