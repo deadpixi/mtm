@@ -24,6 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -252,7 +253,8 @@ handlechar(TMT *vt, char i)
     COMMON_VARS;
 
     char cs[] = {i, 0};
-    #define ON(S, C, A) if (vt->state == (S) && strchr(C, i)){ A; return true;}
+    #define ON(S, C, A) if ((vt->state == (S) || (!(S) && iscntrl(i)))  \
+                             && strchr(C, i)){ A; return true;}
     #define DO(S, C, A) ON(S, C, consumearg(vt); if (!vt->ignored) {A;} \
                                  fixcursor(vt); resetparser(vt););
 
