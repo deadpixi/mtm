@@ -66,11 +66,12 @@ static void reshapechildren(NODE *n);
 static const char *
 getshell(void)
 {
-    if (getenv("SHELL")) return getenv("SHELL");
+    if (getenv("SHELL"))
+        return getenv("SHELL");
 
     struct passwd *pwd = getpwuid(getuid());
-    if (pwd) return pwd->pw_shell;
-
+    if (pwd)
+        return pwd->pw_shell;
     return "/bin/sh";
 }
 
@@ -78,7 +79,8 @@ static NODE *
 newnode(node_t t, NODE *p, int y, int x, int h, int w)
 {
     NODE *n = calloc(1, sizeof(NODE));
-    if (!n || h < 2 || w < 2) return free(n), NULL;
+    if (!n || h < 2 || w < 2)
+        return free(n), NULL;
 
     n->t = t;
     n->pt = -1;
@@ -95,10 +97,14 @@ static void
 freenode(NODE *n, bool recurse)
 {
     if (n){
-        if (n->win) delwin(n->win);
-        if (n->vt) tmt_close(n->vt); 
-        if (recurse) freenode(n->c1, true);
-        if (recurse) freenode(n->c2, true);
+        if (n->win)
+            delwin(n->win);
+        if (n->vt)
+            tmt_close(n->vt); 
+        if (recurse)
+            freenode(n->c1, true);
+        if (recurse)
+            freenode(n->c2, true);
         if (n->pt >= 0){
             close(n->pt);
             FD_CLR(n->pt, &fds);
@@ -110,7 +116,8 @@ freenode(NODE *n, bool recurse)
 static void
 quit(int rc, const char *m)
 {
-    if (m) fprintf(stderr, "%s\n", m);
+    if (m)
+        fprintf(stderr, "%s\n", m);
     freenode(root, true);
     endwin();
     exit(rc);
@@ -122,7 +129,8 @@ safewrite(int fd, const char *b, size_t n)
     size_t w = 0;
     while (w < n){
         ssize_t s = write(fd, b + w, n - w);
-        if (s < 0 && errno != EINTR) return;
+        if (s < 0 && errno != EINTR)
+            return;
         w += (size_t)s;
     }
 }
@@ -156,22 +164,26 @@ newview(NODE *p, int y, int x, int h, int w)
 {
     struct winsize ws = {.ws_row = h, .ws_col = w};
     NODE *n = newnode(VIEW, p, y, x, h, w);
-    if (!n) return NULL;
+    if (!n)
+        return NULL;
 
     n->win = newwin(h, w, y, x);
     keypad(n->win, TRUE);
     nodelay(n->win, TRUE);
-    if (!n->win) return freenode(n, false), NULL;
+    if (!n->win)
+        return freenode(n, false), NULL;
 
     n->vt = tmt_open(h, w, callback, n, unicode? ACS : NULL);
-    if (!n) return freenode(n, false), NULL;
+    if (!n)
+        return freenode(n, false), NULL;
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
         return freenode(n, false), NULL;
     else if (pid == 0){
         setsid();
-        if (unicode) setenv("NCURSES_NO_UTF8_ACS", "1", 1);
+        if (unicode)
+            setenv("NCURSES_NO_UTF8_ACS", "1", 1);
         setenv("TERM", "ansi", 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
@@ -188,7 +200,8 @@ static NODE *
 newcontainer(node_t t, NODE *p, int y, int x, int h, int w, NODE *c1, NODE *c2)
 {
     NODE *n = newnode(t, p, y, x, h, w);
-    if (!n) return NULL;
+    if (!n)
+        return NULL;
 
     n->c1 = c1;
     n->c2 = c2;
@@ -221,8 +234,10 @@ static NODE *
 findnode(NODE *n, int y, int x)
 {
     if (IN(n, y, x)){
-        if (n->c1 && IN(n->c1, y, x)) return findnode(n->c1, y, x);
-        if (n->c2 && IN(n->c2, y, x)) return findnode(n->c2, y, x);
+        if (n->c1 && IN(n->c1, y, x))
+            return findnode(n->c1, y, x);
+        if (n->c2 && IN(n->c2, y, x))
+            return findnode(n->c2, y, x);
         return n;
     }
     return NULL;
@@ -255,8 +270,10 @@ removechild(NODE *p, const NODE *c)
 static void
 deletenode(NODE *n)
 {
-    if (!n || !n->p) quit(EXIT_SUCCESS, NULL);
-    if (n == focused) focus(n->p->c1 == n? n->p->c2 : n->p->c1);
+    if (!n || !n->p)
+        quit(EXIT_SUCCESS, NULL);
+    if (n == focused)
+        focus(n->p->c1 == n? n->p->c2 : n->p->c1);
 
     removechild(n->p, n);
     freenode(n, true);
@@ -320,15 +337,16 @@ buildcchar(TMTCHAR c)
 static void
 drawview(NODE *n, bool force)
 {
-    if (!n->vt) return;
-    const TMTSCREEN *s = tmt_screen(n->vt);
-    for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
-        for (size_t c = 0; c < s->ncol; c++)
-            mvwins_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
+    if (n->vt){
+        const TMTSCREEN *s = tmt_screen(n->vt);
+        for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
+            for (size_t c = 0; c < s->ncol; c++)
+                mvwins_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
+        }
+        tmt_clean(n->vt);
+        wnoutrefresh(n->win);
+        wnoutrefresh(stdscr);
     }
-    tmt_clean(n->vt);
-    wnoutrefresh(n->win);
-    wnoutrefresh(stdscr);
 }
 
 static void
@@ -358,7 +376,8 @@ split(NODE *n, node_t t)
     int nw = t == HORIZONTAL? (n->w - 1) / 2 : n->w;
     NODE *p = n->p;
     NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
-    if (!v) return;
+    if (!v)
+        return;
 
     wclear(n->win); wrefresh(n->win);
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
@@ -434,7 +453,8 @@ run(void)
 {
     while (root){
         fd_set sfds = fds;
-        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0) FD_ZERO(&sfds);
+        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
+            FD_ZERO(&sfds);
         while (handlechar(wgetch(focused->win))) ;
         getinput(root, &sfds);
         doupdate();
@@ -461,7 +481,8 @@ tocolor(tmt_color_t c)
 static void
 initcolors(void)
 {
-    if (COLOR_PAIRS >= 80 || monochrome) use_default_colors();
+    if (COLOR_PAIRS >= 80 || monochrome)
+        use_default_colors();
     for (short fg = -1; !monochrome && fg < TMT_COLOR_MAX; fg++){
         for (short bg = -1; bg < TMT_COLOR_MAX; bg++)
             init_pair(TOPAIR(fg, bg), tocolor(fg), tocolor(bg));
