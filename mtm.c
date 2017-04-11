@@ -483,6 +483,30 @@ HANDLER(ht) /* HT - Horizontal Tab */
     wmove(win, y, mx - 1);
 ENDHANDLER
 
+HANDLER(cr) /* CR - Carriage Return */
+    n->xenl = false;
+    wmove(win, y, 0);
+ENDHANDLER
+
+HANDLER(ind) /* IND - Index */
+    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
+ENDHANDLER
+
+HANDLER(nel) /* NEL - Next Line */
+    cr(v, p, w, 0, NULL);
+    ind(v, p, w, 0, NULL);
+ENDHANDLER
+
+HANDLER(pnl) /* NL - Newline */
+    ind(v, p, w, 0, NULL);
+    if (n->lnm)
+        cr(v, p, w, 0, NULL);
+ENDHANDLER
+
+HANDLER(so) /* SO/SI - Switch Out/In character set */
+    n->gc = (w == 0x0e)? n->g1 : n->g0;
+ENDHANDLER
+
 HANDLER(print) /* Print a character to the terminal */
     if (n->insert)
         ich(v, p, L'@', 0, NULL);
@@ -499,29 +523,6 @@ HANDLER(print) /* Print a character to the terminal */
         n->xenl = true;
 
     wnoutrefresh(win);
-ENDHANDLER
-
-HANDLER(cr) /* CR - Carriage Return */
-    n->xenl = false;
-    wmove(win, y, 0);
-ENDHANDLER
-
-HANDLER(ind) /* IND - Index */
-    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
-ENDHANDLER
-
-HANDLER(nel) /* NEL - Next Line */
-    n->xenl = false;
-    wmove(win, y, 0);
-    ind(v, p, w, 0, NULL);
-ENDHANDLER
-
-HANDLER(pnl) /* NL - Newline */
-    (n->lnm? nel : ind)(v, p, w, argc, argv);
-ENDHANDLER
-
-HANDLER(so) /* SO/SI - Switch Out/In character set */
-    n->gc = (w == 0x0e)? n->g1 : n->g0;
 ENDHANDLER
 
 static void
