@@ -1,0 +1,6 @@
+mtm|Micro Terminal Multiplexer,
+    civis=\E[?25l,
+    cnorm=\E[?25h,
+    kbs=\177,
+    use=vt100,
+    use=ecma+color,

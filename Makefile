@@ -1,6 +1,6 @@
 CC        := gcc
 CFLAGS    ?= -O3 -std=c99 -Wall -Wextra -pedantic
-FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED -DTMT_HAS_WCWIDTH
+FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED
 HEADERS   ?=
 LIBPATH   ?=
 DESTDIR   ?= /usr/local
@@ -9,8 +9,8 @@ LIBS      ?= -l$(CURSESLIB) -lutil
 
 all: mtm
 
-mtm: tmt.c mtm.c config.h
-	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) tmt.c mtm.c $(LIBPATH) $(LIBS)
+mtm: vtparser.c mtm.c config.h
+	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) vtparser.c mtm.c $(LIBPATH) $(LIBS)
 
 config.h: config.def.h
 	cp -i config.def.h config.h

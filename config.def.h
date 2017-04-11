@@ -24,15 +24,6 @@
 /* The force redraw key. */
 #define REDRAW 'l'
 
-/* The preferred alternate character set. */
-#ifndef ACS
-    #ifdef __STDC_ISO_10646__ /* System supports Unicode. */
-        #define ACS L"→←↑↓■◆▒°±▒┘┐┌└┼⎺───⎽├┤┴┬│≤≥π≠£•"
-    #else
-        #define ACS NULL /* Use TMT's built-in ASCII-safe ACS. */
-    #endif
-#endif
-
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
     #if defined(__APPLE__) || (defined(BSD) && !defined(__linux))

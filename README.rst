@@ -10,16 +10,18 @@ Simplicity
     modes, no dozens of commands, no crazy feature list.
 
 Compatibility
-    mtm emulates the common terminfo database's `ansi` terminal type.
+    mtm emulates the common terminfo database's `eterm-color` terminal type.
     That means it should work out of the box on essentially all
     terminfo/termcap-based systems (even pretty old ones), without needing
     to install a new termcap entry.
 
+    Additionally, mtm emulates a classic DEC VT100 fairly well.
+    This venerable terminal is essentially universally supported.
+    For more information, see `Compatibility`_ below.
+
 Size
-    mtm is 500 lines of C, including whitespace and comments.
-    If you include the terminal emulation layer (which is `available
-    separately`_ as a library), the total number of lines is still
-    under a thousand.
+    mtm is small.
+    The entire project is around 1000 lines of code.
 
 Stability
     mtm is "finished" as it is now.
@@ -58,46 +60,86 @@ Installation and configuration is fairly simple:
   but have not been tested.
 - Edit the variables at the top of the Makefile if you need to
   (you probably don't).
-- If you want to change the default keybindings, copy `config.def.h`
-  to `config.h` and edit the copy. Otherwise the build process will
-  use the default.
+- If you want to change the default keybindings or other compile-time flags,
+  copy `config.def.h` to `config.h` and edit the copy. Otherwise the build
+  process will use the defaults.
 - Run `make` or `make CURSESLIB=curses`, whichever works for you.
 - Run `make install` if desired.
 
 Compatibility
 =============
-
 One nice thing about mtm is that it emulates (accurately) an existing
 terminal type that is widely supported.  This means that mtm will work
 out-of-the-box on most systems, at least terminal-emulation-wise.
 
-This terminal emulation is actually implemented as a library, called
-`libtmt`_, that you may find useful.
+By default, mtm advertises itself as an `eterm-color` terminal.
+This is the terminal emulated by the Emacs
+`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>` package.
+The terminfo definition for this terminal has been in the common
+terminfo database for years, and is widely deployed.
 
-.. _`libtmt`: https://github.com/deadpixi/libtmt
+(Note that this should not be taken to imply that anyone involved in the
+`AnsiTerm` project endorses or otherwise has anything to do with mtm.)
 
 Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
 mtm does not, however, support some features that some programs want. The
 only user-visible features that might be missed are terminal-title setting
 and mouse support.  If you need those, mtm will not work for you, sorry
-(and neither would any pure "ansi" terminal).
+(and neither would many other kinds of terminals).
+
+The `mtm` Terminal Type
+-----------------------
+mtm comes with a terminfo description file called mtm.ti.
+This file describes all of the features supported by mtm, including such
+features as toggling the visibility of the cursor.
+
+If you want to install this terminal type, use the `tic` compiler that comes
+with ncurses::
+
+    tic -s mtm.ti
+
+That command will compile and install the terminfo entry.
+After doing so, calling mtm with `-t mtm`::
+
+    mtm -t mtm
+
+will instruct programs to use that terminfo entry.
+
+A Note on VT100 Compatibility
+-----------------------------
+mtm emulates the venerable VT100 terminal fairly well,
+meaning that if your system doesn't have an `eterm-color`
+terminfo entry, you can tell mtm (via the `-t` flag) to
+advertise itself as a VT100 and things should just work.
+
+(mtm even gets some of the hairier VT100 features, like the newline glitch and
+mixing controls with escape sequences right. The only features it doesn't do
+are those that can't be done portably via curses, like terminal resizing,
+inverted palettes, and double-width/double-height lines).
 
 Usage
 =====
 
 Usage is simple::
 
-    mtm [-mu] [-c KEY]
+    mtm [-b] [-t NAME] [-c KEY]
 
-The `-m` flag puts mtm in monochrome mode.
+The `-b` flag tells mtm to not alias the backspace and delete keys.
+The default terminal emulation, `eterm-color` expects the backspace
+key to send the same code as the delete key, but many other terminals
+(notably the VT100) expect backspace to send backspace. You probably
+don't need to worry about this option.
 
-The `-u` flag instructs mtm to use Unicode box-drawing characters.
-Note that if your system/compiler doesn't support Unicode,
-this option will have no effect.
+The `-t` flag tells mtm what terminal type to advertise itself as.
+Note that this doesn't change how mtm interprets control sequences;
+it simply controls what the `TERM` environment variable is set to.
 
 The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
 this is `g`.
+
+mtm also recognizes but ignores the `-m` and `-u` flags, for backwards
+compatibility with older versions.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
 mtm lets you split up the terminal into multiple virtual terminals.

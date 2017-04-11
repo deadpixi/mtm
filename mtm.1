@@ -6,8 +6,10 @@
 .Nd a micro-terminal multiplexer
 .Sh SYNOPSIS
 .Nm
+.Op Fl b
 .Op Fl m
 .Op Fl u
+.Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
 .Sh DESCRIPTION
 .Nm
@@ -18,15 +20,23 @@ terminal session.
 .Pp
 The options are
 .Bl -tag -width Ds
-.It Fl m
-Run in monochrome mode;
-do not use color of any sort.
-By default,
+.It Fl b
+Tell
 .Nm
-will run in color mode.
-.It Fl u
-Use Unicode box drawing characters.
-Note that this option has no effect if your system does not support rendering such characters.
+to not alias the backspace and delete keys.
+This is needed only if you are attempting to emulate a terminal that requires
+this
+.Po
+e.g. a VT100
+.Pc "."
+You probably don't need to use this option.
+.It Fl t Ar TERMINAL
+Set the
+.Ev TERM
+environment variable within the mtm session to
+.Ar TERM "."
+By default, this is
+.Em "eterm-color" "."
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER
@@ -36,6 +46,13 @@ key.
 By default this is
 .Dq "g" "."
 .El
+.Pp
+The
+.Fl m
+and
+.Fl u
+flags are recognized but ignored,
+for backwards compatibility.
 .Pp
 .Ss Usage
 .Nm
@@ -74,31 +91,6 @@ can be changed at compile time and therefore may be different for this installat
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
-.Ss Colors
-If the hosting terminal supports at least 80 color pairs
-.Po
-e.g.
-.Em "xterm-256color"
-but not plain
-.Em xterm
-.Pc ","
-.Nm
-will use the
-.Pq natural
-colors defined for the default virtual terminal forground and background colors.
-.Pp
-If the hosting terminal does not support at least 64 color pairs
-.Pq "rare nowadays" ","
-.Nm
-will run in monochrome mode.
-.Pp
-Note that this does not affect the number of available color pairs within the virtual
-terminals created by
-.Nm ";"
-this number remains fixed at either 64
-.Pq "when run in color mode"
-or 1
-.Pq "when run in monochrome mode" "."
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
@@ -135,9 +127,6 @@ and will finally use
 will attempt to fit all virtual terminals in the window at once.
 If many terminals are created and the containing window is shrunk too small,
 the display will be suboptimal.
-.Pp
-Double-width and combining characters are rendered as single-width invalid characters,
-or elided.
 .Pp
 The only human language in which output is generated and in which documentation
 is available is English,

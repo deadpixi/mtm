@@ -24,13 +24,19 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <wctype.h>
 
 #include "config.h"
-#include "tmt.h"
+#include "vtparser.h"
 
+#define MAXCTABLE 72
+#define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-mu] [-c KEY]"
+#define USAGE "usage: mtm [-t NAME] [-c KEY]"
+
+/*** DATA TYPES */
+typedef void (*PRINTER)(WINDOW *win, wchar_t w);
 
 typedef enum{
     HORIZONTAL,
@@ -42,79 +48,109 @@ typedef struct NODE NODE;
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
-    int y, x, h, w, pt;
+    int y, x, sy, sx, h, w, pt, vis, bot, top;
+    short fg, bg, sfg, sbg, sp;
+    bool insert, oxenl, xenl, decom, ckm, am, lnm, *tabs;
+    PRINTER g0, g1, gc, gs;
+    attr_t sattr;
     WINDOW *win;
-    TMT *vt;
+    VTPARSER *vp;
 };
 
+typedef struct COLORTABLE COLORTABLE;
+struct COLORTABLE{
+    bool used;
+    short f;
+    short b;
+};
+
+/*** GLOBALS AND PROTOTYPES */
+static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool monochrome, unicode, cmd;
+static bool cmd, kbs;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
 static void reshape(NODE *n, int y, int x, int h, int w);
-static void draw(NODE *n, bool force);
-static void drawview(NODE *n, bool force);
+static void draw(NODE *n);
 static void reshapechildren(NODE *n);
+static const char *term = "eterm-color";
+static void freenode(NODE *n, bool recursive);
 
-#define TOPAIR(fg, bg) (monochrome? 0 :                          \
-    COLOR_PAIRS < 80? (((fg == -1? TMT_COLOR_WHITE : fg) << 3) | \
-                       (bg == -1? TMT_COLOR_BLACK : bg))       : \
-                      ((fg == -1? 128 : fg << 3)               | \
-                       (bg == -1? 64  : bg)))
+/*** CHARACTER SETS
+ * Each of the functions below takes a wide character and a window, and prints
+ * that character to that window, optionally translating it first. We do this
+ * by creating different PRINTER functions for each character set.
+ *
+ * We can't use static lookup tables because some of the special characters,
+ * like the line-drawing ones, do not have constant representations.
+ */
 
-static const char *
-getshell(void)
-{
-    if (getenv("SHELL"))
-        return getenv("SHELL");
-
-    struct passwd *pwd = getpwuid(getuid());
-    if (pwd)
-        return pwd->pw_shell;
-    return "/bin/sh";
-}
-
-static NODE *
-newnode(node_t t, NODE *p, int y, int x, int h, int w)
-{
-    NODE *n = calloc(1, sizeof(NODE));
-    if (!n || h < 2 || w < 2)
-        return free(n), NULL;
-
-    n->t = t;
-    n->pt = -1;
-    n->p = p;
-    n->y = y;
-    n->x = x;
-    n->h = h;
-    n->w = w;
-
-    return n;
-}
-
+/* ASCII Character Set...really just "don't do any translation." */
 static void
-freenode(NODE *n, bool recurse)
+cset_ascii(WINDOW *win, wchar_t w)
 {
-    if (n){
-        if (n->win)
-            delwin(n->win);
-        if (n->vt)
-            tmt_close(n->vt); 
-        if (recurse)
-            freenode(n->c1, true);
-        if (recurse)
-            freenode(n->c2, true);
-        if (n->pt >= 0){
-            close(n->pt);
-            FD_CLR(n->pt, &fds);
-        }
-        free(n);
-    }
+    cchar_t r;
+    attr_t a = A_NORMAL;
+    short p = 0;
+    wchar_t s[] = {w, 0};
+
+    wattr_get(win, &a, &p, NULL);
+    setcchar(&r, s, a, p, NULL);
+    wadd_wchnstr(win, &r, 1);
 }
 
+/* UK Character Set */
 static void
-quit(int rc, const char *m)
+cset_uk(WINDOW *win, wchar_t w)
+{
+    w == L'#'? (void)wadd_wchnstr(win, WACS_STERLING, 1) : cset_ascii(win, w);
+}
+
+/* Graphics Character Set */
+static void
+cset_graphics(WINDOW *win, wchar_t w)
+{
+    switch (w){
+        case L'}': wadd_wchnstr(win, WACS_STERLING, 1); return;
+        case L'.': wadd_wchnstr(win, WACS_DARROW, 1);   return;
+        case L',': wadd_wchnstr(win, WACS_LARROW, 1);   return;
+        case L'+': wadd_wchnstr(win, WACS_RARROW, 1);   return;
+        case L'-': wadd_wchnstr(win, WACS_UARROW, 1);   return;
+        case L'h': wadd_wchnstr(win, WACS_BOARD, 1);    return;
+        case L'~': wadd_wchnstr(win, WACS_BULLET, 1);   return;
+        case L'a': wadd_wchnstr(win, WACS_CKBOARD, 1);  return;
+        case L'f': wadd_wchnstr(win, WACS_DEGREE, 1);   return;
+        case L'`': wadd_wchnstr(win, WACS_DIAMOND, 1);  return;
+        case L'z': wadd_wchnstr(win, WACS_GEQUAL, 1);   return;
+        case L'{': wadd_wchnstr(win, WACS_PI, 1);       return;
+        case L'q': wadd_wchnstr(win, WACS_HLINE, 1);    return;
+        case L'i': wadd_wchnstr(win, WACS_LANTERN, 1);  return;
+        case L'n': wadd_wchnstr(win, WACS_PLUS, 1);     return;
+        case L'y': wadd_wchnstr(win, WACS_LEQUAL, 1);   return;
+        case L'm': wadd_wchnstr(win, WACS_LLCORNER, 1); return;
+        case L'j': wadd_wchnstr(win, WACS_LRCORNER, 1); return;
+        case L'|': wadd_wchnstr(win, WACS_NEQUAL, 1);   return;
+        case L'g': wadd_wchnstr(win, WACS_PLMINUS, 1);  return;
+        case L'o': wadd_wchnstr(win, WACS_S1, 1);       return;
+        case L'p': wadd_wchnstr(win, WACS_S3, 1);       return;
+        case L'r': wadd_wchnstr(win, WACS_S7, 1);       return;
+        case L's': wadd_wchnstr(win, WACS_S9, 1);       return;
+        case L'0': wadd_wchnstr(win, WACS_BLOCK, 1);    return;
+        case L'w': wadd_wchnstr(win, WACS_TTEE, 1);     return;
+        case L'u': wadd_wchnstr(win, WACS_RTEE, 1);     return;
+        case L't': wadd_wchnstr(win, WACS_LTEE, 1);     return;
+        case L'v': wadd_wchnstr(win, WACS_BTEE, 1);     return;
+        case L'l': wadd_wchnstr(win, WACS_ULCORNER, 1); return;
+        case L'k': wadd_wchnstr(win, WACS_URCORNER, 1); return;
+        case L'x': wadd_wchnstr(win, WACS_VLINE, 1);    return;
+        default:   cset_ascii(win, w);                  return;
+    };
+}
+
+/*** UTILITY FUNCTIONS */
+static void
+quit(int rc, const char *m) /* Shut down MTM. */
 {
     if (m)
         fprintf(stderr, "%s\n", m);
@@ -124,7 +160,7 @@ quit(int rc, const char *m)
 }
 
 static void
-safewrite(int fd, const char *b, size_t n)
+safewrite(int fd, const char *b, size_t n) /* Write, checking for errors. */
 {
     size_t w = 0;
     while (w < n){
@@ -135,56 +171,513 @@ safewrite(int fd, const char *b, size_t n)
     }
 }
 
+static inline short
+getpair(short f, short b) /* Get a curses color pair number given a fg/bg. */
+{
+    for (short i = 1; i < MAXCTABLE; i++){
+        if (!ctable[i].used){
+            ctable[i].used = true;
+            ctable[i].f = f;
+            ctable[i].b = b;
+            init_pair(i, f, b);
+        }
+        if (ctable[i].f == f && ctable[i].b == b)
+            return i;
+    }
+
+    return 0;
+}
+
+static const char *
+getshell(void) /* Get the user's preferred shell. */
+{
+    if (getenv("SHELL"))
+        return getenv("SHELL");
+
+    struct passwd *pwd = getpwuid(getuid());
+    if (pwd)
+        return pwd->pw_shell;
+    return "/bin/sh";
+}
+
+/*** TERMINAL EMULATION HANDLERS
+ * These functions implement the various terminal commands activated by
+ * escape sequences and printing to the terminal. Large amounts of boilerplate
+ * code is shared among all these functions, and is factored out into the
+ * macros below:
+ *      PD(n, d)       - Parameter n, with default d.
+ *      P0(n)          - Parameter n, default 0.
+ *      P1(n)          - Parameter n, default 1.
+ *      PW             - Parameter 0, as a wchar_t.
+ *      SEND(n, s)     - Write string s to node n's host.
+ *      (END)HANDLER   - Declare/end a handler function
+ *      COMMONVARS     - All of the common variables for a handler.
+ *                       x, y   - cursor position
+ *                       mx, my - max possible values for x and y
+ *                       n      - the current node
+ *                       win    - the current window
+ *
+ * The funny names for handler functions are from their ANSI/ECMA/DEC mnemonic.
+ */
+#define PD(x, d) (argc < (x) || !argv? (d) : argv[(x)])
+#define P0(x) PD(x, 0)
+#define P1(x) (!P0(x)? 1 : P0(x))
+#define PW ((wchar_t)P0(0))
+#define SEND(n, s) safewrite(n->pt, s, strlen(s))
+#define COMMONVARS                                     \
+    NODE *n = (NODE *)p;                               \
+    WINDOW *win = n->win;                              \
+    int y, x, my, mx;                                  \
+    (void)v; (void)p; (void)w; (void)argc; (void)argv; \
+    (void)win; (void)y; (void)x; (void)my; (void)mx;   \
+    getyx(win, y, x);                                  \
+    getmaxyx(win, my, mx);
+#define HANDLER(name)                                           \
+    static void                                                 \
+    name (VTPARSER *v, void *p, wchar_t w, int argc, int *argv) \
+    {                                                           \
+        COMMONVARS;
+#define ENDHANDLER                                              \
+    }
+
+HANDLER(bell) /* Terminal bell. */
+    beep();
+ENDHANDLER
+
+HANDLER(cup) /* CUP - Cursor Position */
+    n->xenl = false;
+    wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
+ENDHANDLER
+
+HANDLER(dch) /* DCH - Delete Character */
+    for (int i = 0; i < P1(0); i++)
+        wdelch(win);
+ENDHANDLER
+
+HANDLER(ich) /* ICH - Insert Character */
+    for (int i = 0; i < P1(0); i++)
+        wins_nwstr(win, L" ", 1);
+ENDHANDLER
+
+HANDLER(ind) /* IND - Index */
+    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
+ENDHANDLER
+
+HANDLER(nel) /* NEL - Next Line */
+    n->xenl = false;
+    wmove(win, y, 0);
+    ind(v, p, w, 0, NULL);
+ENDHANDLER
+
+HANDLER(cuu) /* CUU - Cursor Up */
+    wmove(win, MAX(y - P1(0), n->top), x);
+ENDHANDLER
+
+HANDLER(cud) /* CUD - Cursor Down */
+    wmove(win, MIN(y + P1(0), n->bot - 1), x);
+ENDHANDLER
+
+HANDLER(cuf) /* CUF - Cursor Forward */
+    wmove(win, y, MIN(x + P1(0), mx - 1));
+ENDHANDLER
+
+HANDLER(ack) /* ACK - Acknowledge Enquiry */
+    SEND(n, "\006");
+ENDHANDLER
+
+HANDLER(hts) /* HTS - Horizontal Tab Set */
+    n->tabs[x] = true;
+ENDHANDLER
+
+HANDLER(ri) /* RI - Reverse Index */
+    y == n->top? wscrl(win, -1) : wmove(win, y - 1, x);
+ENDHANDLER
+
+HANDLER(sc) /* SC - Save Cursor */
+    n->gs = n->gc;                           /* save current character set */
+    n->sx = x;                               /* save X position            */
+    n->sy = y;                               /* save Y position            */
+    wattr_get(win, &n->sattr, &n->sp, NULL); /* save attrs and color pair  */
+    n->sfg = n->fg;                          /* save foreground color      */
+    n->sbg = n->bg;                          /* save background color      */
+    n->oxenl = n->xenl;                      /* save xenl state            */
+ENDHANDLER
+
+HANDLER(rc) /* RC - Restore Cursor */
+    n->gc = n->gs;                           /* get current character set */
+    wmove(win, n->sy, n->sx);                /* get old position          */
+    wattr_set(win, n->sattr, n->sp, NULL);   /* get attrs and color pair  */
+    n->fg = n->sfg;                          /* get foreground color      */
+    n->bg = n->sbg;                          /* get background color      */
+    n->xenl = n->oxenl;                      /* get xenl state            */
+ENDHANDLER
+
+HANDLER(scs) /* SCS - Select Character Set */
+    PRINTER *t = (PW == L'(')? &n->g0 : &n->g1;
+    switch (w){
+        case L'A': *t = cset_uk;       break;
+        case L'B': *t = cset_ascii;    break;
+        case L'0': *t = cset_graphics; break;
+        case L'1': *t = cset_ascii;    break;
+        case L'2': *t = cset_graphics; break;
+    }
+ENDHANDLER
+
+HANDLER(tbc) /* TBC - Tabulation Clear */
+    switch (P0(0)){
+        case 0: n->tabs[x] = false;                      break;
+        case 3: memset(n->tabs, 0, sizeof(bool) * n->w); break;
+    }
+ENDHANDLER
+
+HANDLER(cub) /* CUB - Cursor Backward */
+    n->xenl = false;
+    wmove(win, y, MAX(x - P1(0), 0));
+ENDHANDLER
+
+HANDLER(decaln) /* DECALN - DEC Alignment Test */
+    chtype s[] = {COLOR_PAIR(0) | 'E', 0};
+    for (int r = 0; r < my; r++){
+        for (int c = 0; c <= mx; c++)
+            mvwaddchnstr(win, r, c, s, 1);
+    }
+    wmove(win, y, x);
+ENDHANDLER
+
+HANDLER(decid) /* DECID - Identify Terminal */
+    SEND(n, w == L'c'? "\033[?1;2c" : "\033[?6c");
+ENDHANDLER
+
+HANDLER(rcordecaln) /* RC or DECLN - Restore Cursor or DECALN */
+    ((PW == L'#')? decaln : rc)(v, p, w, argc, argv);
+ENDHANDLER
+
+HANDLER(el) /* EL - Erase in Line */
+    chtype s[] = {COLOR_PAIR(0) | ' ', 0};
+    switch (P0(0)){
+        case 0: wclrtoeol(win);                                         break;
+        case 1: for (int i = 0; i <= x; i++) mvwaddchstr(win, y, i, s); break;
+        case 2: wmove(win, y, 0); wclrtoeol(win);                       break;
+    }
+    wmove(win, y, x);
+ENDHANDLER
+
+HANDLER(ed) /* ED - Erase in Display */
+    int o = 1;
+    switch (P0(0)){
+        case 0: wclrtobot(win);                   break;
+        case 2: wmove(win, 0, 0); wclrtobot(win); break;
+        case 1:
+            for (int i = 0; i < y; i++){
+                wmove(win, i, 0);
+                wclrtoeol(win);
+            }
+            wmove(win, y, x);
+            el(v, p, w, 1, &o);
+            break;
+    }
+    wmove(win, y, x);
+ENDHANDLER
+
+HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
+    SEND(n, P0(0)? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
+ENDHANDLER
+
+HANDLER(dsr) /* DSR - Device Status Report */
+    char buf[100] = {0};
+
+    if (P0(0) == 5)
+        strncpy(buf, "\033[0n", 99);
+    else if (P0(0) == 6)
+        snprintf(buf, 99, "\033[%d;%dR", (n->decom? y - n->top : y) + 1, x + 1);
+
+    if (buf[0])
+        SEND(n, buf);
+ENDHANDLER
+
+HANDLER(idl) /* IL or DL - Insert/Delete Line */
+    /* Programs expect IL and DL to scroll as needed... */
+    wsetscrreg(win, y, n->bot - 1);
+    wscrl(win, w == L'L'? -P1(0) : P1(0));
+    wsetscrreg(win, n->top, n->bot - 1);
+ENDHANDLER
+
+HANDLER(csr) /* CSR - Change Scrolling Region */
+    int t = P1(0) - 1;
+    int b = PD(1, my);
+    if (t < b && b <= my){
+        n->top = t;
+        n->bot = b;
+        wsetscrreg(win, t, b - 1);
+        cup(v, p, L'H', 0, NULL);
+    }
+ENDHANDLER
+
+HANDLER(mode) /* Set or Reset Mode */
+    bool set = (w == L'h');
+    for (int i = 0; i < argc; i++) switch (P0(i)){
+        case  1: n->ckm = set;                             break;
+        case  3: werase(win); wmove(win, 0, 0);            break;
+        case  4: n->insert = set;                          break;
+        case  6: n->decom = set; cup(v, p, L'H', 0, NULL); break;
+        case  7: n->am = set;                              break;
+        case 20: n->lnm = set;                             break;
+        case 25: n->vis = set;                             break;
+    }
+ENDHANDLER
+
+HANDLER(sgr0) /* Reset SGR to default */
+    wattrset(n->win, A_NORMAL);
+    wcolor_set(n->win, 0, NULL);
+    n->fg = n->bg = -1;
+ENDHANDLER
+
+HANDLER(ris) /* RIS - Reset to Initial State */
+    sgr0(v, p, 0, 0, NULL);
+    wclear(win);
+    wmove(win, 0, 0);
+    n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
+    n->ckm = n->am = true;
+    n->top = 0;
+    n->bot = n->h;
+    wsetscrreg(win, 0, n->h - 1);
+
+    for (int i = 0; i < mx; i++)
+        n->tabs[i] = (i % 8 == 0);
+ENDHANDLER
+
+HANDLER(sgr) /* SGR - Select Graphic Rendition */
+    bool doc = false;
+
+    if (!argc)
+        sgr0(v, p, 0, 0, NULL);
+
+    for (int i = 0; i < argc; i++) switch (P0(i)){
+        case  0: sgr0(v, p, 0, 0, NULL);              break;
+        case  1: wattron(win,  A_BOLD);               break;
+        case  4: wattron(win,  A_UNDERLINE);          break;
+        case  5: wattron(win,  A_BLINK);              break;
+        case  7: wattron(win,  A_REVERSE);            break;
+        case  8: wattron(win,  A_INVIS);              break;
+        case 24: wattroff(win, A_UNDERLINE);          break;
+        case 27: wattroff(win, A_REVERSE);            break;
+        case 30: n->fg = COLOR_BLACK;   doc = true;   break;
+        case 31: n->fg = COLOR_RED;     doc = true;   break;
+        case 32: n->fg = COLOR_GREEN;   doc = true;   break;
+        case 33: n->fg = COLOR_YELLOW;  doc = true;   break;
+        case 34: n->fg = COLOR_BLUE;    doc = true;   break;
+        case 35: n->fg = COLOR_MAGENTA; doc = true;   break;
+        case 36: n->fg = COLOR_CYAN;    doc = true;   break;
+        case 37: n->fg = COLOR_WHITE;   doc = true;   break;
+        case 39: n->fg = -1;            doc = true;   break;
+        case 40: n->bg = COLOR_BLACK;   doc = true;   break;
+        case 41: n->bg = COLOR_RED;     doc = true;   break;
+        case 42: n->bg = COLOR_GREEN;   doc = true;   break;
+        case 43: n->bg = COLOR_YELLOW;  doc = true;   break;
+        case 44: n->bg = COLOR_BLUE;    doc = true;   break;
+        case 45: n->bg = COLOR_MAGENTA; doc = true;   break;
+        case 46: n->bg = COLOR_CYAN;    doc = true;   break;
+        case 47: n->bg = COLOR_WHITE;   doc = true;   break;
+        case 49: n->bg = -1;            doc = true;   break;
+    }
+
+    if (doc)
+        wcolor_set(win, getpair(n->fg, n->bg), NULL);
+}
+
+HANDLER(ht) /* HT - Horizontal Tab */
+    for (int i = x + 1; i < n->w; i++) if (n->tabs[i]){
+        wmove(win, y, i);
+        return;
+    }
+    wmove(win, y, mx - 1);
+ENDHANDLER
+
+HANDLER(print) /* Print a character to the terminal */
+    if (n->insert)
+        ich(v, p, L'@', 0, NULL);
+
+    if (n->xenl){
+        n->xenl = false;
+        if (n->am)
+            nel(v, p, L'\n', 0, NULL);
+        getyx(win, y, x);
+    }
+
+    n->gc(n->win, w);
+    if (wmove(win, y, x + 1) == ERR)
+        n->xenl = true;
+
+    wnoutrefresh(win);
+ENDHANDLER
+
+HANDLER(cr) /* CR - Carriage Return */
+    n->xenl = false;
+    wmove(win, y, 0);
+ENDHANDLER
+
+HANDLER(pnl) /* NL - Newline */
+    (n->lnm? nel : ind)(v, p, w, argc, argv);
+ENDHANDLER
+
+HANDLER(so) /* SO - Switch Out character set */
+    n->gc = (w == 0x0e)? n->g1 : n->g0;
+ENDHANDLER
+
 static void
-fixcursor(void)
+setupevents(NODE *n) /* Wire up escape sequences to functions. */
+{
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x05, ack);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, ht);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, pnl);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0e, so);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0f, so);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuu);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'K', el);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'x', decreqtparm);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'2', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'B', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'E', nel);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'H', hts);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
+    vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
+}
+
+/*** MTM FUNCTIONS
+ * These functions do the user-visible work of MTM: creating nodes in the
+ * tree, updating the display, and so on.
+ */
+static bool *
+newtabs(int w, int ow, bool *oldtabs) /* Initialize default tabstops. */
+{
+    bool *tabs = calloc(w, sizeof(bool));
+    if (!tabs)
+        return NULL;
+
+    for (int i = 0; i < w; i++)
+        tabs[i] = i < ow? oldtabs[i] : (i % 8 == 0);
+
+    return tabs;
+}
+
+static NODE *
+newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
+{
+    NODE *n = calloc(1, sizeof(NODE));
+    bool *tabs = newtabs(w, 0, NULL);
+    if (!n || !tabs || h < 2 || w < 2)
+        return free(n), free(tabs), NULL;
+
+    n->gc = n->g0 = cset_ascii;
+    n->g1 = cset_graphics;
+    n->t = t;
+    n->pt = -1;
+    n->p = p;
+    n->y = y;
+    n->x = x;
+    n->h = h;
+    n->w = w;
+    n->tabs = tabs;
+
+    return n;
+}
+
+static void
+freenode(NODE *n, bool recurse) /* Free a node. */
+{
+    if (n){
+        if (n->win)
+            delwin(n->win);
+        if (n->vp)
+            vtparser_close(n->vp);
+        if (recurse)
+            freenode(n->c1, true);
+        if (recurse)
+            freenode(n->c2, true);
+        if (n->pt >= 0){
+            close(n->pt);
+            FD_CLR(n->pt, &fds);
+        }
+        free(n->tabs);
+        free(n);
+    }
+}
+
+static void
+fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused){
-        const TMTPOINT *c = tmt_cursor(focused->vt);
-        wmove(focused->win, c->r, c->c);
+        int y, x;
+        getyx(focused->win, y, x);
+        wmove(focused->win, y, x);
+        curs_set(focused->vis);
         wrefresh(focused->win);
     }
 }
 
-void
-callback(tmt_msg_t m, struct TMT *v, const void *r, void *p)
-{
-    const char *a = (const char *)r;
-    (void)v; /* avoid a compiler warning */
-    switch (m){
-        case TMT_MSG_UPDATE: drawview((NODE *)p, false);               break;
-        case TMT_MSG_MOVED:  /* ignored */                             break;
-        case TMT_MSG_BELL:   beep();                                   break;
-        case TMT_MSG_ANSWER: safewrite(((NODE *)p)->pt, a, strlen(a)); break;
-        case TMT_MSG_CURSOR: curs_set(a && a[0] == 't');               break;
-    }
-}
-
 static NODE *
-newview(NODE *p, int y, int x, int h, int w)
+newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 {
     struct winsize ws = {.ws_row = h, .ws_col = w};
     NODE *n = newnode(VIEW, p, y, x, h, w);
     if (!n)
         return NULL;
 
+    n->fg = n->bg = -1;
+    n->vis = 1;
+    n->top = 0;
+    n->bot = h;
+    n->am = true;
+    n->ckm = true;
     n->win = newwin(h, w, y, x);
-    keypad(n->win, TRUE);
     nodelay(n->win, TRUE);
+    scrollok(n->win, TRUE);
+    keypad(n->win, TRUE);
     if (!n->win)
         return freenode(n, false), NULL;
 
-    n->vt = tmt_open(h, w, callback, n, unicode? ACS : NULL);
+    n->vp = vtparser_open(n);
     if (!n)
         return freenode(n, false), NULL;
+    setupevents(n);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
         return freenode(n, false), NULL;
     else if (pid == 0){
         setsid();
-        if (unicode)
-            setenv("NCURSES_NO_UTF8_ACS", "1", 1);
-        setenv("TERM", "ansi", 1);
+        setenv("NCURSES_NO_UTF8_ACS", "1", 1);
+        setenv("TERM", term, 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
@@ -197,7 +690,8 @@ newview(NODE *p, int y, int x, int h, int w)
 }
 
 static NODE *
-newcontainer(node_t t, NODE *p, int y, int x, int h, int w, NODE *c1, NODE *c2)
+newcontainer(node_t t, NODE *p, int y, int x, int h, int w,
+             NODE *c1, NODE *c2) /* Create a new container */
 {
     NODE *n = newnode(t, p, y, x, h, w);
     if (!n)
@@ -212,7 +706,7 @@ newcontainer(node_t t, NODE *p, int y, int x, int h, int w, NODE *c1, NODE *c2)
 }
 
 static void
-focus(NODE *n)
+focus(NODE *n) /* Focus a node. */
 {
     if (!n)
         return;
@@ -231,7 +725,7 @@ focus(NODE *n)
                      x >= n->x && x <= n->x + n->w)
 
 static NODE *
-findnode(NODE *n, int y, int x)
+findnode(NODE *n, int y, int x) /* Find the node enclosing y,x. */
 {
     if (IN(n, y, x)){
         if (n->c1 && IN(n->c1, y, x))
@@ -244,7 +738,7 @@ findnode(NODE *n, int y, int x)
 }
 
 static void
-replacechild(NODE *n, NODE *c1, NODE *c2)
+replacechild(NODE *n, NODE *c1, NODE *c2) /* Replace c1 of n with c2. */
 {
     c2->p = n;
     if (!n){
@@ -257,18 +751,18 @@ replacechild(NODE *n, NODE *c1, NODE *c2)
 
     n = n? n : root;
     reshape(n, n->y, n->x, n->h, n->w);
-    draw(n, true);
+    draw(n);
 }
 
 static void
-removechild(NODE *p, const NODE *c)
+removechild(NODE *p, const NODE *c) /* Replace p with other child. */
 {
     replacechild(p->p, p, c == p->c1? p->c2 : p->c1);
     freenode(p, false);
 }
 
 static void
-deletenode(NODE *n)
+deletenode(NODE *n) /* Delete a node. */
 {
     if (!n || !n->p)
         quit(EXIT_SUCCESS, NULL);
@@ -280,18 +774,23 @@ deletenode(NODE *n)
 }
 
 static void
-reshapeview(NODE *n, int y, int x, int h, int w)
+reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
 {
     struct winsize ws = {.ws_row = h, .ws_col = w};
-    wresize(n->win, 1, 1);
-    mvwin(n->win, y, x);
+    bool *tabs = newtabs(w, n->w, n->tabs);
+    if (!tabs)
+        return;
+
+    mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 1, w? w : 1);
-    tmt_resize(n->vt, h, w);
+    mvwin(n->win, y, x);
+    wnoutrefresh(n->win);
+    csr(n->vp, n, L'r', 0, NULL);
     ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
 static void
-reshapechildren(NODE *n)
+reshapechildren(NODE *n) /* Reshape all children of a view. */
 {
     if (n->t == HORIZONTAL){
         reshape(n->c1, n->y, n->x, n->h, n->w / 2);
@@ -303,7 +802,7 @@ reshapechildren(NODE *n)
 }
 
 static void
-reshape(NODE *n, int y, int x, int h, int w)
+reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
 {
     n->y = y;
     n->x = x;
@@ -314,72 +813,42 @@ reshape(NODE *n, int y, int x, int h, int w)
         reshapeview(n, y, x, h, w);
     else
         reshapechildren(n);
-    draw(n, true);
-}
-
-static cchar_t *
-buildcchar(TMTCHAR c)
-{
-    static cchar_t r;
-    attr_t a = A_NORMAL;
-    wchar_t s[] = {c.c, 0};
-
-    if (c.a.dim)               a |= A_DIM;
-    if (c.a.invisible)         a |= A_INVIS;
-    if (c.a.bold || c.a.blink) a |= A_BOLD;
-    if (c.a.underline)         a |= A_UNDERLINE;
-    if (c.a.reverse)           a |= A_REVERSE;
-
-    setcchar(&r, s, a, TOPAIR(c.a.fg, c.a.bg), NULL);
-    return &r;
+    draw(n);
+    wnoutrefresh(n->win);
 }
 
 static void
-drawview(NODE *n, bool force)
+drawchildren(const NODE *n) /* Draw all children of n. */
 {
-    if (n->vt){
-        const TMTSCREEN *s = tmt_screen(n->vt);
-        for (size_t r = 0; r < s->nline; r++) if (s->lines[r]->dirty || force){
-            for (size_t c = 0; c < s->ncol; c++)
-                mvwins_wch(n->win, r, c, buildcchar(s->lines[r]->chars[c]));
-        }
-        tmt_clean(n->vt);
-        wnoutrefresh(n->win);
-        wnoutrefresh(stdscr);
-    }
-}
-
-static void
-drawchildren(const NODE *n, bool force)
-{
-    draw(n->c1, force);
+    draw(n->c1);
     if (n->t == HORIZONTAL)
         mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
     else
         mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
-    draw(n->c2, force);
+    wnoutrefresh(stdscr);
+    draw(n->c2);
 }
 
 static void
-draw(NODE *n, bool force)
+draw(NODE *n) /* Draw a node. */
 {
     if (n->t == VIEW)
-        drawview(n, force);
+        wnoutrefresh(n->win);
     else
-        drawchildren(n, force);
+        drawchildren(n);
 }
 
 static void
-split(NODE *n, node_t t)
+split(NODE *n, node_t t) /* Split a node. */
 {
     int nh = t == VERTICAL?   (n->h - 1) / 2 : n->h;
-    int nw = t == HORIZONTAL? (n->w - 1) / 2 : n->w;
+    int nw = t == HORIZONTAL? (n->w) / 2 : n->w;
     NODE *p = n->p;
     NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v)
         return;
 
-    wclear(n->win); wrefresh(n->win);
+    /* wclear(n->win);*/ wrefresh(n->win);
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
         freenode(v, false);
@@ -388,18 +857,20 @@ split(NODE *n, node_t t)
 
     replacechild(p, n, c);
     focus(v);
-    draw(p? p : root, true);
+    draw(p? p : root);
 }
 
 static bool
-getinput(NODE *n, fd_set *f)
+getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 {
-    if (n && n->c1 && !getinput(n->c1, f)) return false;
-    if (n && n->c2 && !getinput(n->c2, f)) return false;
+    if (n && n->c1 && !getinput(n->c1, f))
+        return false;
+    if (n && n->c2 && !getinput(n->c2, f))
+        return false;
     if (n && n->pt >= 0 && FD_ISSET(n->pt, f)){
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
-            tmt_write(n->vt, iobuf, r);
+            vtparser_write(n->vp, iobuf, r);
         else if (r < 0 && errno != EINTR && errno != EWOULDBLOCK)
             return deletenode(n), false;
     }
@@ -407,34 +878,23 @@ getinput(NODE *n, fd_set *f)
 }
 
 static bool
-handlechar(int k)
+handlechar(int k) /* Handle a single input character. */
 {
-    #define WRITESTR(s) safewrite(focused->pt, s, strlen(s))
     #define DO(s, i, a) if (s == cmd && i == k) { a ; cmd = false; return true;}
-    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   ERR,           return false)
-    DO(cmd,   commandkey,    return cmd = !cmd)
-    DO(false, '\n',          WRITESTR("\r"))
-    DO(false, KEY_DOWN,      WRITESTR(TMT_KEY_DOWN))
-    DO(false, KEY_UP,        WRITESTR(TMT_KEY_UP))
-    DO(false, KEY_LEFT,      WRITESTR(TMT_KEY_LEFT))
-    DO(false, KEY_RIGHT,     WRITESTR(TMT_KEY_RIGHT))
-    DO(false, KEY_BACKSPACE, WRITESTR(TMT_KEY_BACKSPACE))
-    DO(false, KEY_BTAB,      WRITESTR(TMT_KEY_BACK_TAB))
-    DO(false, KEY_F(1),      WRITESTR(TMT_KEY_F1))
-    DO(false, KEY_F(2),      WRITESTR(TMT_KEY_F2))
-    DO(false, KEY_F(3),      WRITESTR(TMT_KEY_F3))
-    DO(false, KEY_F(4),      WRITESTR(TMT_KEY_F4))
-    DO(false, KEY_F(5),      WRITESTR(TMT_KEY_F5))
-    DO(false, KEY_F(6),      WRITESTR(TMT_KEY_F6))
-    DO(false, KEY_F(7),      WRITESTR(TMT_KEY_F7))
-    DO(false, KEY_F(8),      WRITESTR(TMT_KEY_F8))
-    DO(false, KEY_F(9),      WRITESTR(TMT_KEY_F9))
-    DO(false, KEY_F(10),     WRITESTR(TMT_KEY_F10))
-    DO(false, KEY_NPAGE,     WRITESTR(TMT_KEY_PAGE_DOWN))
-    DO(false, KEY_PPAGE,     WRITESTR(TMT_KEY_PAGE_UP))
-    DO(false, KEY_HOME,      WRITESTR(TMT_KEY_HOME))
-    DO(false, KEY_END,       WRITESTR(TMT_KEY_END))
+    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
+    DO(cmd,   KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
+    DO(cmd,   KEY_DC,        SEND(focused, "\177"))
+    DO(false, '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
+    DO(false, KEY_UP,        SEND(focused, focused->ckm? "\033OA" : "\033[A"))
+    DO(false, KEY_DOWN,      SEND(focused, focused->ckm? "\033OB" : "\033[B"))
+    DO(false, KEY_RIGHT,     SEND(focused, focused->ckm? "\033OC" : "\033[C"))
+    DO(false, KEY_LEFT,      SEND(focused, focused->ckm? "\033OD" : "\033[D"))
+    DO(false, KEY_HOME,      SEND(focused, "\033[1~"))
+    DO(false, KEY_END,       SEND(focused, "\033[4~"))
+    DO(false, KEY_PPAGE,     SEND(focused, "\033[5~"))
+    DO(false, KEY_NPAGE,     SEND(focused, "\033[6~"))
+    DO(false, commandkey,    return cmd = true)
     DO(true,  MOVE_UP,       focus(findnode(root, ABOVE(focused))))
     DO(true,  MOVE_DOWN,     focus(findnode(root, BELOW(focused))))
     DO(true,  MOVE_LEFT,     focus(findnode(root, LEFT(focused))))
@@ -442,14 +902,14 @@ handlechar(int k)
     DO(true,  HSPLIT,        split(focused, HORIZONTAL))
     DO(true,  VSPLIT,        split(focused, VERTICAL))
     DO(true,  DELETE_NODE,   deletenode(focused))
-    DO(true,  REDRAW,        draw(root, true))
+    DO(true,  REDRAW,        draw(root))
     char c[] = {(char)k, 0};
-    WRITESTR(c);
+    SEND(focused, c);
     return cmd = false, true;
 }
 
 static void
-run(void)
+run(void) /* Run MTM. */
 {
     while (root){
         fd_set sfds = fds;
@@ -462,33 +922,6 @@ run(void)
     }
 }
 
-static short
-tocolor(tmt_color_t c)
-{
-    switch (c){
-        case TMT_COLOR_BLACK:   return COLOR_BLACK;
-        case TMT_COLOR_RED:     return COLOR_RED;
-        case TMT_COLOR_GREEN:   return COLOR_GREEN;
-        case TMT_COLOR_YELLOW:  return COLOR_YELLOW;
-        case TMT_COLOR_BLUE:    return COLOR_BLUE;
-        case TMT_COLOR_MAGENTA: return COLOR_MAGENTA;
-        case TMT_COLOR_CYAN:    return COLOR_CYAN;
-        case TMT_COLOR_WHITE:   return COLOR_WHITE;
-        default:                return -1;
-    }
-}
-
-static void
-initcolors(void)
-{
-    if (COLOR_PAIRS >= 80 || monochrome)
-        use_default_colors();
-    for (short fg = -1; !monochrome && fg < TMT_COLOR_MAX; fg++){
-        for (short bg = -1; bg < TMT_COLOR_MAX; bg++)
-            init_pair(TOPAIR(fg, bg), tocolor(fg), tocolor(bg));
-    }
-}
-
 int
 main(int argc, char **argv)
 {
@@ -496,23 +929,23 @@ main(int argc, char **argv)
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN);
     int c = 0;
-    while ((c = getopt(argc, argv, "umc:")) != -1){
-        switch (c){
-            case 'm': monochrome = true;           break;
-            case 'c': commandkey = CTL(optarg[0]); break;
-            case 'u': unicode = true;              break;
-            default:  quit(EXIT_FAILURE, USAGE);   break;
-        }
+    while ((c = getopt(argc, argv, "mubt:c:")) != -1) switch (c){
+        case 'b': kbs = true;                  break;
+        case 'c': commandkey = CTL(optarg[0]); break;
+        case 't': term = optarg;               break;
+        case 'm': /* ignored */                break;
+        case 'u': /* ignored */                break;
+        default:  quit(EXIT_FAILURE, USAGE);   break;
     }
 
     initscr();
     raw();
     noecho();
+    intrflush(stdscr, FALSE);
     start_color();
-    monochrome = COLOR_PAIRS < 64? true : monochrome;
-    initcolors();
+    use_default_colors();
     focus(root = newview(NULL, 0, 0, LINES, COLS));
-    draw(root, true);
+    draw(root);
     run();
 
     quit(EXIT_SUCCESS, NULL);
