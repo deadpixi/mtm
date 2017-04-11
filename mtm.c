@@ -639,9 +639,9 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused){
         int y, x;
+        curs_set(focused->vis);
         getyx(focused->win, y, x);
         wmove(focused->win, y, x);
-        curs_set(focused->vis);
         wrefresh(focused->win);
     }
 }
@@ -775,18 +775,21 @@ deletenode(NODE *n) /* Delete a node. */
 static void
 reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
 {
+    int oy, ox;
     struct winsize ws = {.ws_row = h, .ws_col = w};
     bool *tabs = newtabs(w, n->w, n->tabs);
     if (!tabs)
         return;
 
+    getyx(n->win, oy, ox);
     free(n->tabs);
     n->tabs = tabs;
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 1, w? w : 1);
     mvwin(n->win, y, x);
-    wnoutrefresh(n->win);
     csr(n->vp, n, L'r', 0, NULL);
+    wmove(n->win, oy, ox);
+    wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
@@ -849,7 +852,7 @@ split(NODE *n, node_t t) /* Split a node. */
     if (!v)
         return;
 
-    /* wclear(n->win);*/ wrefresh(n->win);
+    /* XXX wclear(n->win);*/ wrefresh(n->win);
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
         freenode(v, false);
@@ -928,7 +931,7 @@ main(int argc, char **argv)
 {
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
-    signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN); /* automatically reap children */
     int c = 0;
     while ((c = getopt(argc, argv, "mubt:c:")) != -1) switch (c){
         case 'b': kbs = true;                  break;
