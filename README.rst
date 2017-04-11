@@ -35,14 +35,13 @@ Stability
 
 .. _`available separately`: https://github.com/deadpixi/libtmt
 
-The Obiligatory Screenshot
---------------------------
+Screenshots
+-----------
 
 .. image:: screenshot.png
-
-The Second Screenshot, Showing Off Colors and Alternate Character Set Support
------------------------------------------------------------------------------
 .. image:: screenshot2.png
+.. image:: screenshot3.png
+.. image:: screenshot4.png
 
 Community
 =========
