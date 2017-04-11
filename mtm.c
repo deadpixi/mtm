@@ -797,11 +797,13 @@ static void
 reshapechildren(NODE *n) /* Reshape all children of a view. */
 {
     if (n->t == HORIZONTAL){
+        int i = n->w % 2? 0 : 1;
         reshape(n->c1, n->y, n->x, n->h, n->w / 2);
-        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - 1);
+        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
     } else if (n->t == VERTICAL){
+        int i = n->h % 2? 0 : 1;
         reshape(n->c1, n->y, n->x, n->h / 2, n->w);
-        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - 1, n->w);
+        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
     }
 }
 
@@ -852,7 +854,6 @@ split(NODE *n, node_t t) /* Split a node. */
     if (!v)
         return;
 
-    /* XXX wclear(n->win);*/ wrefresh(n->win);
     NODE *c = newcontainer(t, n->p, n->y, n->x, n->h, n->w, n, v);
     if (!c){
         freenode(v, false);
