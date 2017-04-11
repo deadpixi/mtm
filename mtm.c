@@ -217,7 +217,7 @@ getshell(void) /* Get the user's preferred shell. */
  *                       n      - the current node
  *                       win    - the current window
  *
- * The funny names for handler functions are from their ANSI/ECMA/DEC mnemonic.
+ * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
 #define PD(x, d) (argc < (x) || !argv? (d) : argv[(x)])
 #define P0(x) PD(x, 0)
@@ -257,16 +257,6 @@ ENDHANDLER
 HANDLER(ich) /* ICH - Insert Character */
     for (int i = 0; i < P1(0); i++)
         wins_nwstr(win, L" ", 1);
-ENDHANDLER
-
-HANDLER(ind) /* IND - Index */
-    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
-ENDHANDLER
-
-HANDLER(nel) /* NEL - Next Line */
-    n->xenl = false;
-    wmove(win, y, 0);
-    ind(v, p, w, 0, NULL);
 ENDHANDLER
 
 HANDLER(cuu) /* CUU - Cursor Up */
@@ -397,7 +387,7 @@ HANDLER(dsr) /* DSR - Device Status Report */
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
-    /* Programs expect IL and DL to scroll as needed... */
+    /* Programs expect IL and DL to scroll as needed, so no insdelln... */
     wsetscrreg(win, y, n->bot - 1);
     wscrl(win, w == L'L'? -P1(0) : P1(0));
     wsetscrreg(win, n->top, n->bot - 1);
@@ -442,7 +432,6 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     n->top = 0;
     n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
-
     for (int i = 0; i < mx; i++)
         n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
@@ -517,11 +506,21 @@ HANDLER(cr) /* CR - Carriage Return */
     wmove(win, y, 0);
 ENDHANDLER
 
+HANDLER(ind) /* IND - Index */
+    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
+ENDHANDLER
+
+HANDLER(nel) /* NEL - Next Line */
+    n->xenl = false;
+    wmove(win, y, 0);
+    ind(v, p, w, 0, NULL);
+ENDHANDLER
+
 HANDLER(pnl) /* NL - Newline */
     (n->lnm? nel : ind)(v, p, w, argc, argv);
 ENDHANDLER
 
-HANDLER(so) /* SO - Switch Out character set */
+HANDLER(so) /* SO/SI - Switch Out/In character set */
     n->gc = (w == 0x0e)? n->g1 : n->g0;
 ENDHANDLER
 
@@ -658,8 +657,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->vis = 1;
     n->top = 0;
     n->bot = h;
-    n->am = true;
-    n->ckm = true;
+    n->am = n->ckm = true;
     n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
@@ -677,7 +675,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
         return freenode(n, false), NULL;
     else if (pid == 0){
         setsid();
-        setenv("NCURSES_NO_UTF8_ACS", "1", 1);
         setenv("TERM", term, 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
