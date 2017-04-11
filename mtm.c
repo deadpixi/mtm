@@ -782,6 +782,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     if (!tabs)
         return;
 
+    free(n->tabs);
     n->tabs = tabs;
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 1, w? w : 1);
