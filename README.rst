@@ -66,57 +66,6 @@ Installation and configuration is fairly simple:
 - Run `make` or `make CURSESLIB=curses`, whichever works for you.
 - Run `make install` if desired.
 
-Compatibility
-=============
-One nice thing about mtm is that it emulates (accurately) an existing
-terminal type that is widely supported.  This means that mtm will work
-out-of-the-box on most systems, at least terminal-emulation-wise.
-
-By default, mtm advertises itself as an `eterm-color` terminal.
-This is the terminal emulated by the Emacs
-`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>` package.
-The terminfo definition for this terminal has been in the common
-terminfo database for years, and is widely deployed.
-
-(Note that this should not be taken to imply that anyone involved in the
-`AnsiTerm` project endorses or otherwise has anything to do with mtm.)
-
-Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
-mtm does not, however, support some features that some programs want. The
-only user-visible features that might be missed are terminal-title setting
-and mouse support.  If you need those, mtm will not work for you, sorry
-(and neither would many other kinds of terminals).
-
-The `mtm` Terminal Type
------------------------
-mtm comes with a terminfo description file called mtm.ti.
-This file describes all of the features supported by mtm, including such
-features as toggling the visibility of the cursor.
-
-If you want to install this terminal type, use the `tic` compiler that comes
-with ncurses::
-
-    tic -s mtm.ti
-
-That command will compile and install the terminfo entry.
-After doing so, calling mtm with `-t mtm`::
-
-    mtm -t mtm
-
-will instruct programs to use that terminfo entry.
-
-A Note on VT100 Compatibility
------------------------------
-mtm emulates the venerable VT100 terminal fairly well,
-meaning that if your system doesn't have an `eterm-color`
-terminfo entry, you can tell mtm (via the `-t` flag) to
-advertise itself as a VT100 and things should just work.
-
-(mtm even gets some of the hairier VT100 features, like the newline glitch and
-mixing controls with escape sequences right. The only features it doesn't do
-are those that can't be done portably via curses, like terminal resizing,
-inverted palettes, and double-width/double-height lines).
-
 Usage
 =====
 
@@ -171,6 +120,57 @@ l
 
 That's it.  There aren't dozens of commands, there are no modes, there's
 nothing else to learn.
+
+Compatibility
+=============
+One nice thing about mtm is that it emulates (accurately) an existing
+terminal type that is widely supported.  This means that mtm will work
+out-of-the-box on most systems, at least terminal-emulation-wise.
+
+By default, mtm advertises itself as an `eterm-color` terminal.
+This is the terminal emulated by the Emacs
+`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>` package.
+The terminfo definition for this terminal has been in the common
+terminfo database for years, and is widely deployed.
+
+(Note that this should not be taken to imply that anyone involved in the
+`AnsiTerm` project endorses or otherwise has anything to do with mtm.)
+
+Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
+mtm does not, however, support some features that some programs want. The
+only user-visible features that might be missed are terminal-title setting
+and mouse support.  If you need those, mtm will not work for you, sorry
+(and neither would many other kinds of terminals).
+
+The `mtm` Terminal Type
+-----------------------
+mtm comes with a terminfo description file called mtm.ti.
+This file describes all of the features supported by mtm, including such
+features as toggling the visibility of the cursor.
+
+If you want to install this terminal type, use the `tic` compiler that comes
+with ncurses::
+
+    tic -s mtm.ti
+
+That command will compile and install the terminfo entry.
+After doing so, calling mtm with `-t mtm`::
+
+    mtm -t mtm
+
+will instruct programs to use that terminfo entry.
+
+A Note on VT100 Compatibility
+-----------------------------
+mtm emulates the venerable VT100 terminal fairly well,
+meaning that if your system doesn't have an `eterm-color`
+terminfo entry, you can tell mtm (via the `-t` flag) to
+advertise itself as a VT100 and things should just work.
+
+(mtm even gets some of the hairier VT100 features, like the newline glitch and
+mixing controls with escape sequences right. The only features it doesn't do
+are those that can't be done portably via curses, like terminal resizing,
+inverted palettes, and double-width/double-height lines.)
 
 Copyright and License
 =====================
