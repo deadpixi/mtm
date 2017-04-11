@@ -286,7 +286,8 @@ HANDLER(ack) /* ACK - Acknowledge Enquiry */
 ENDHANDLER
 
 HANDLER(hts) /* HTS - Horizontal Tab Set */
-    n->tabs[x] = true;
+    if (x < n->w && x > 0)
+        n->tabs[x] = true;
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
@@ -325,8 +326,8 @@ ENDHANDLER
 
 HANDLER(tbc) /* TBC - Tabulation Clear */
     switch (P0(0)){
-        case 0: n->tabs[x] = false;                      break;
-        case 3: memset(n->tabs, 0, sizeof(bool) * n->w); break;
+        case 0: n->tabs[x] = false;                            break;
+        case 3: memset(n->tabs, 0, sizeof(bool) * (n->w - 1)); break;
     }
 ENDHANDLER
 
@@ -781,6 +782,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     if (!tabs)
         return;
 
+    n->tabs = tabs;
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 1, w? w : 1);
     mvwin(n->win, y, x);
