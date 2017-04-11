@@ -404,6 +404,10 @@ HANDLER(csr) /* CSR - Change Scrolling Region */
     }
 ENDHANDLER
 
+HANDLER(numkp) /* Application/Numeric Keypad Mode */
+    n->ckm = (w == L'=');
+ENDHANDLER
+
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
@@ -571,6 +575,8 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'=', numkp);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'>', numkp);
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
 }
 
