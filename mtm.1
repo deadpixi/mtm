@@ -91,6 +91,45 @@ can be changed at compile time and therefore may be different for this installat
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
+.Ss The Value of Fl t
+The terminal name passed to
+.Fl t
+does not change how
+.Nm
+interprets command sequences,
+but rather changes what kind of terminal
+.Nm
+claims to be.
+Safe bets for this value are
+.Bl -tag -width Ds
+.It mtm
+This is the terminal described by the
+.Pa mtm.ti
+.Xr terminfo 5
+description that shipped with
+.Nm "."
+It is not necessarily installed on your system,
+but if it is, it will tell programs how to use all of the
+.Nm
+features,
+including cursor visibility changes.
+.It eterm-color
+This is the default.
+It is widely supported and its description is installed by default on most systems.
+The only user-visible difference when using this terminal name is that programs will
+not necessarily know how to change cursor visibility.
+.It vt100
+.Nm
+emulates most of the venerable VT100's behavior,
+except for those things that cannot be portably emulated via curses
+.Po
+double-height characters, for example
+.Pc "."
+Note that the VT100 did not support color or changing the cursor's visibility,
+so advertising that
+.Nm
+is a VT100 will cause most programs to stop displaying color.
+The VT100's behavior is almost universally supported.
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
