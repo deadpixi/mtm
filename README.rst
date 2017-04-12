@@ -35,14 +35,6 @@ Stability
 
 .. _`available separately`: https://github.com/deadpixi/libtmt
 
-Screenshots
------------
-
-.. image:: screenshot.png
-.. image:: screenshot2.png
-.. image:: screenshot3.png
-.. image:: screenshot4.png
-
 Community
 =========
 
@@ -119,6 +111,14 @@ l
 
 That's it.  There aren't dozens of commands, there are no modes, there's
 nothing else to learn.
+
+Screenshots
+-----------
+
+.. image:: screenshot.png
+.. image:: screenshot2.png
+.. image:: screenshot3.png
+.. image:: screenshot4.png
 
 Compatibility
 =============
