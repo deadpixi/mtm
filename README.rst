@@ -122,6 +122,11 @@ Screenshots
 
 Compatibility
 =============
+(Note that you only need to read this section if you're curious.
+mtm should just work out-of-the-box for you, thanks to the efforts
+of the various hackers over the years to make terminal-independence
+a reality.)
+
 One nice thing about mtm is that it emulates (accurately) an existing
 terminal type that is widely supported.  This means that mtm will work
 out-of-the-box on most systems, at least terminal-emulation-wise.
