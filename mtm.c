@@ -791,7 +791,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     free(n->tabs);
     n->tabs = tabs;
     mvwin(n->win, 0, 0);
-    wresize(n->win, h? h : 1, w? w : 1);
+    wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
     csr(n->vp, n, L'r', 0, NULL);
     wmove(n->win, oy, ox);
