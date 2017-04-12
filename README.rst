@@ -133,7 +133,9 @@ The terminfo definition for this terminal has been in the common
 terminfo database for years, and is widely deployed.
 
 (Note that this should not be taken to imply that anyone involved in the
-`AnsiTerm` project endorses or otherwise has anything to do with mtm.)
+`AnsiTerm` project endorses or otherwise has anything to do with mtm, and
+vice-versa. Their work is excellent, though, and you should definitely
+check it out.)
 
 Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
 mtm does not, however, support some features that some programs want. The
