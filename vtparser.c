@@ -209,6 +209,7 @@ vtparser_write(VTPARSER *vp, const char *s, size_t n)
  * which is far more than we need. As a result, I've stripped out
  * everything that wouldn't be applicable to a stock VT100 in 1978.
  * For more information, see http://vt100.net/emu/dec_ansi_parser
+ * Please note that Williams does not (AFAIK) endorse this work.
  */
 #define MAKESTATE(name, onentry, ...)         \
     static STATE name ={                      \
