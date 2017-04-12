@@ -128,7 +128,7 @@ out-of-the-box on most systems, at least terminal-emulation-wise.
 
 By default, mtm advertises itself as an `eterm-color` terminal.
 This is the terminal emulated by the Emacs
-`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>` package.
+`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>`_ package.
 The terminfo definition for this terminal has been in the common
 terminfo database for years, and is widely deployed.
 
