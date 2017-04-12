@@ -502,9 +502,10 @@ HANDLER(nel) /* NEL - Next Line */
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
-    ind(v, p, w, 0, NULL);
     if (n->lnm)
-        cr(v, p, w, 0, NULL);
+        nel(v, p, w, 0, NULL);
+    else
+        ind(v, p, w, 0, NULL);
 ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
