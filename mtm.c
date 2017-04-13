@@ -267,6 +267,13 @@ HANDLER(ich) /* ICH - Insert Character */
         wins_nwstr(win, L" ", 1);
 ENDHANDLER
 
+HANDLER(ech) /* ECH - Erase Character */
+    chtype s[] = {COLOR_PAIR(0) | ' ', 0};
+    for (int i = 0; i < P1(0); i++)
+        mvwaddchnstr(win, y, x + i, s, 1);
+    wmove(win, y, x);
+ENDHANDLER
+
 HANDLER(cuu) /* CUU - Cursor Up */
     wmove(win, MAX(y - P1(0), n->top), x);
 ENDHANDLER
@@ -615,6 +622,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'S', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'T', su);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'X', ech);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
