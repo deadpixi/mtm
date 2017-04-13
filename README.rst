@@ -10,7 +10,7 @@ Simplicity
     modes, no dozens of commands, no crazy feature list.
 
 Compatibility
-    mtm emulates the common terminfo database's `eterm-color` terminal type.
+    mtm emulates a classic ANSI text terminal.
     That means it should work out of the box on essentially all
     terminfo/termcap-based systems (even pretty old ones), without needing
     to install a new termcap entry.
@@ -65,7 +65,7 @@ Usage is simple::
     mtm [-b] [-t NAME] [-c KEY]
 
 The `-b` flag tells mtm to not alias the backspace and delete keys.
-The default terminal emulation, `eterm-color` expects the backspace
+The default terminal advertisement, `eterm-color` expects the backspace
 key to send the same code as the delete key, but many other terminals
 (notably the VT100) expect backspace to send backspace. You probably
 don't need to worry about this option.
@@ -166,10 +166,15 @@ After doing so, calling mtm with `-t mtm`::
 
 will instruct programs to use that terminfo entry.
 
+Using this terminfo entry allows programs to use the full power of mtm's
+terminal emulation, but it is entirely optional. A primary design goal
+of mtm was for it to be completely usable on systems that didn't have
+the mtm terminfo entry installed.
+
 A Note on VT100 Compatibility
 -----------------------------
 mtm emulates the venerable VT100 terminal fairly well,
-meaning that if your system doesn't have an `eterm-color`
+meaning that if your system doesn't have an `eterm-color` or `mtm`
 terminfo entry, you can tell mtm (via the `-t` flag) to
 advertise itself as a VT100 and things should just work.
 
