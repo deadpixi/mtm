@@ -51,6 +51,7 @@ struct NODE{
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl, decom, ckm, am, lnm, *tabs;
+    wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win;
@@ -232,11 +233,15 @@ getshell(void) /* Get the user's preferred shell. */
     (void)win; (void)y; (void)x; (void)my; (void)mx;   \
     getyx(win, y, x);                                  \
     getmaxyx(win, my, mx);
-#define HANDLER(name)                                           \
+
+#define REPHANDLER(name)                                        \
     static void                                                 \
     name (VTPARSER *v, void *p, wchar_t w, int argc, int *argv) \
     {                                                           \
-        COMMONVARS;
+        COMMONVARS
+#define HANDLER(name)                                           \
+        REPHANDLER(name)                                        \
+        n->repc = 0;
 #define ENDHANDLER                                              \
     }
 
@@ -570,8 +575,17 @@ HANDLER(print) /* Print a character to the terminal */
     n->gc(n->win, w);
     if (wmove(win, y, x + 1) == ERR)
         n->xenl = true;
+    n->repc = w;
 
     wnoutrefresh(win);
+ENDHANDLER
+
+REPHANDLER(rep) /* REP - Repeat Character */
+    if (n->repc){
+        for (int i = 0; i < P1(0); i++)
+            print(v, p, n->repc, 0, NULL);
+    }
+    n->repc = 0;
 ENDHANDLER
 
 static void
@@ -605,6 +619,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'b', rep);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
