@@ -252,11 +252,11 @@ HANDLER(su) /* SU - Scroll Up/Down */
     wscrl(win, c);
 ENDHANDLER
 
-HANDLER(sl) /* SL - Scroll Left */
+HANDLER(sl) /* SL/SR - Scroll Left or Right */
     for (int r = 0; r < my; r++){
         wmove(win, r, 0);
         for (int i = 0; i < P1(0); i++)
-            wdelch(win);
+            (w == L'@')? wdelch(win) : wins_nwstr(win, L" ", 1);
     }
     wmove(win, y, x);
 ENDHANDLER
@@ -287,8 +287,11 @@ HANDLER(ech) /* ECH - Erase Character */
     wmove(win, y, x);
 ENDHANDLER
 
-HANDLER(cuu) /* CUU - Cursor Up */
-    wmove(win, MAX(y - P1(0), n->top), x);
+HANDLER(cuuorsr) /* CUU or SR - Cursor Up or Scroll Right */
+    if (iw == L' ')
+        sl(v, p, w, iw, argc, argv);
+    else
+        wmove(win, MAX(y - P1(0), n->top), x);
 ENDHANDLER
 
 HANDLER(cud) /* CUD - Cursor Down */
@@ -619,7 +622,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0e, so);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0f, so);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuu);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuuorsr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
