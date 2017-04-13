@@ -234,15 +234,13 @@ getshell(void) /* Get the user's preferred shell. */
     getyx(win, y, x);                                  \
     getmaxyx(win, my, mx);
 
-#define REPHANDLER(name)                                        \
+#define HANDLER(name)                                           \
     static void                                                 \
     name (VTPARSER *v, void *p, wchar_t w, int argc, int *argv) \
     {                                                           \
         COMMONVARS
-#define HANDLER(name)                                           \
-        REPHANDLER(name)                                        \
-        n->repc = 0;
 #define ENDHANDLER                                              \
+        n->repc = 0;                                            \
     }
 
 HANDLER(bell) /* Terminal bell. */
@@ -578,14 +576,13 @@ HANDLER(print) /* Print a character to the terminal */
     n->repc = w;
 
     wnoutrefresh(win);
-ENDHANDLER
+} /* we don't use ENDHANDLER here because we don't want to clear repc */
 
-REPHANDLER(rep) /* REP - Repeat Character */
+HANDLER(rep) /* REP - Repeat Character */
     if (n->repc){
         for (int i = 0; i < P1(0); i++)
             print(v, p, n->repc, 0, NULL);
     }
-    n->repc = 0;
 ENDHANDLER
 
 static void
