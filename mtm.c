@@ -479,12 +479,28 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         wcolor_set(win, getpair(n->fg, n->bg), NULL);
 }
 
+HANDLER(cbt) /* CBT - Cursor Backwards Tab */
+    for (int i = x - 1; i >= 0; i--) if (n->tabs[i]){
+        wmove(win, y, i);
+        return;
+    }
+    wmove(win, y, 0);
+}
+
 HANDLER(ht) /* HT - Horizontal Tab */
     for (int i = x + 1; i < n->w; i++) if (n->tabs[i]){
         wmove(win, y, i);
         return;
     }
     wmove(win, y, mx - 1);
+ENDHANDLER
+
+HANDLER(tab) /* Tab backwards or forwards. */
+    for (int i = 0; i < P1(0); i++) switch (w){
+        case L'I':  ht(v, p, w, 0, NULL);  break;
+        case L'\t': ht(v, p, w, 0, NULL);  break;
+        case L'Z':  cbt(v, p, w, 0, NULL); break;
+    }
 ENDHANDLER
 
 HANDLER(cr) /* CR - Carriage Return */
@@ -536,7 +552,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x05, ack);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, ht);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, tab);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, pnl);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
@@ -548,11 +564,13 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'I', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'K', el);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
