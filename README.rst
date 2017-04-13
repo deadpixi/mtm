@@ -127,26 +127,27 @@ mtm should just work out-of-the-box for you, thanks to the efforts
 of the various hackers over the years to make terminal-independence
 a reality.)
 
-One nice thing about mtm is that it emulates (accurately) an existing
-terminal type that is widely supported.  This means that mtm will work
-out-of-the-box on most systems, at least terminal-emulation-wise.
-
 By default, mtm advertises itself as an `eterm-color` terminal.
 This is the terminal emulated by the Emacs
 `AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>`_ package.
 The terminfo definition for this terminal has been in the common
-terminfo database for years, and is widely deployed.
+terminfo database for years, and is widely deployed, meaning it's
+probably already on your system.
 
 (Note that this should not be taken to imply that anyone involved in the
 `AnsiTerm` project endorses or otherwise has anything to do with mtm, and
 vice-versa. Their work is excellent, though, and you should definitely
 check it out.)
 
-Anything that uses termcap/terminfo or (n)curses should "just work" with mtm.
-mtm does not, however, support some features that some programs want. The
-only user-visible features that might be missed are terminal-title setting
-and mouse support.  If you need those, mtm will not work for you, sorry
-(and neither would many other kinds of terminals).
+That being said, mtm emulates an ANSI text terminal, including various
+seldom-implemented features defined in ISO-6429. In terms of features and
+quirks, it is a perfect superset of the classic `eterm-color` terminal,
+and a near superset of the venerable VT100. It implements many of the
+commonly-implemented features of the VT220 as well.
+
+The upshot of this is that mtm will work out-of-the-box on essentially
+all systems, even those that assume a target terminal type and don't use
+an abstraction library (e.g. curses).
 
 The `mtm` Terminal Type
 -----------------------
