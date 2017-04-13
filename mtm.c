@@ -168,7 +168,7 @@ safewrite(int fd, const char *b, size_t n) /* Write, checking for errors. */
         ssize_t s = write(fd, b + w, n - w);
         if (s < 0 && errno != EINTR)
             return;
-        else
+        else if (s < 0)
             s = 0;
         w += (size_t)s;
     }
@@ -211,7 +211,6 @@ getshell(void) /* Get the user's preferred shell. */
  *      PD(n, d)       - Parameter n, with default d.
  *      P0(n)          - Parameter n, default 0.
  *      P1(n)          - Parameter n, default 1.
- *      PW             - Parameter 0, as a wchar_t.
  *      SEND(n, s)     - Write string s to node n's host.
  *      (END)HANDLER   - Declare/end a handler function
  *      COMMONVARS     - All of the common variables for a handler.
@@ -225,21 +224,20 @@ getshell(void) /* Get the user's preferred shell. */
 #define PD(x, d) (argc < (x) || !argv? (d) : argv[(x)])
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x)? 1 : P0(x))
-#define PW ((wchar_t)P0(0))
 #define SEND(n, s) safewrite(n->pt, s, strlen(s))
-#define COMMONVARS                                     \
-    NODE *n = (NODE *)p;                               \
-    WINDOW *win = n->win;                              \
-    int y, x, my, mx;                                  \
-    (void)v; (void)p; (void)w; (void)argc; (void)argv; \
-    (void)win; (void)y; (void)x; (void)my; (void)mx;   \
-    getyx(win, y, x);                                  \
+#define COMMONVARS                                                  \
+    NODE *n = (NODE *)p;                                            \
+    WINDOW *win = n->win;                                           \
+    int y, x, my, mx;                                               \
+    (void)v; (void)p; (void)w; (void)iw; (void)argc; (void)argv;    \
+    (void)win; (void)y; (void)x; (void)my; (void)mx;                \
+    getyx(win, y, x);                                               \
     getmaxyx(win, my, mx);
 
-#define HANDLER(name)                                           \
-    static void                                                 \
-    name (VTPARSER *v, void *p, wchar_t w, int argc, int *argv) \
-    {                                                           \
+#define HANDLER(name)                                                       \
+    static void                                                             \
+    name (VTPARSER *v, void *p, wchar_t w, wchar_t iw, int argc, int *argv) \
+    {                                                                       \
         COMMONVARS
 #define ENDHANDLER                                              \
         n->repc = 0; /* control sequences cannot be repeated */ \
@@ -321,7 +319,7 @@ HANDLER(rc) /* RC - Restore Cursor */
 ENDHANDLER
 
 HANDLER(scs) /* SCS - Select Character Set */
-    PRINTER *t = (PW == L'(')? &n->g0 : &n->g1;
+    PRINTER *t = (iw == L'(')? &n->g0 : &n->g1;
     switch (w){
         case L'A': *t = cset_uk;       break;
         case L'B': *t = cset_ascii;    break;
@@ -357,7 +355,7 @@ HANDLER(decid) /* DECID - Identify Terminal */
 ENDHANDLER
 
 HANDLER(rcordecaln) /* RC or DECLN - Restore Cursor or DECALN */
-    ((PW == L'#')? decaln : rc)(v, p, w, argc, argv);
+    ((iw == L'#')? decaln : rc)(v, p, w, iw, argc, argv);
 ENDHANDLER
 
 HANDLER(el) /* EL - Erase in Line */
@@ -381,7 +379,7 @@ HANDLER(ed) /* ED - Erase in Display */
                 wclrtoeol(win);
             }
             wmove(win, y, x);
-            el(v, p, w, 1, &o);
+            el(v, p, w, iw, 1, &o);
             break;
     }
     wmove(win, y, x);
@@ -417,7 +415,7 @@ HANDLER(csr) /* CSR - Change Scrolling Region */
         n->top = t;
         n->bot = b;
         wsetscrreg(win, t, b - 1);
-        cup(v, p, L'H', 0, NULL);
+        cup(v, p, L'H', 0, 0, NULL);
     }
 ENDHANDLER
 
@@ -428,13 +426,13 @@ ENDHANDLER
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  1: n->ckm = set;                             break;
-        case  3: werase(win); wmove(win, 0, 0);            break;
-        case  4: n->insert = set;                          break;
-        case  6: n->decom = set; cup(v, p, L'H', 0, NULL); break;
-        case  7: n->am = set;                              break;
-        case 20: n->lnm = set;                             break;
-        case 25: n->vis = set;                             break;
+        case  1: n->ckm = set;                                break;
+        case  3: werase(win); wmove(win, 0, 0);               break;
+        case  4: n->insert = set;                             break;
+        case  6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
+        case  7: n->am = set;                                 break;
+        case 20: n->lnm = set;                                break;
+        case 25: n->vis = set;                                break;
     }
 ENDHANDLER
 
@@ -445,7 +443,7 @@ HANDLER(sgr0) /* Reset SGR to default */
 ENDHANDLER
 
 HANDLER(ris) /* RIS - Reset to Initial State */
-    sgr0(v, p, 0, 0, NULL);
+    sgr0(v, p, 0, 0, 0, NULL);
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
@@ -461,10 +459,10 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
     bool doc = false;
 
     if (!argc)
-        sgr0(v, p, 0, 0, NULL);
+        sgr0(v, p, 0, 0, 0, NULL);
 
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: sgr0(v, p, 0, 0, NULL);              break;
+        case  0: sgr0(v, p, 0, 0, 0, NULL);           break;
         case  1: wattron(win,  A_BOLD);               break;
         case  4: wattron(win,  A_UNDERLINE);          break;
         case  5: wattron(win,  A_BLINK);              break;
@@ -538,9 +536,9 @@ ENDHANDLER
 
 HANDLER(tab) /* Tab backwards or forwards. */
     for (int i = 0; i < P1(0); i++) switch (w){
-        case L'I':  ht(v, p, w, 0, NULL);  break;
-        case L'\t': ht(v, p, w, 0, NULL);  break;
-        case L'Z':  cbt(v, p, w, 0, NULL); break;
+        case L'I':  ht(v, p, w, 0, 0, NULL);  break;
+        case L'\t': ht(v, p, w, 0, 0, NULL);  break;
+        case L'Z':  cbt(v, p, w, 0, 0, NULL); break;
     }
 ENDHANDLER
 
@@ -554,15 +552,15 @@ HANDLER(ind) /* IND - Index */
 ENDHANDLER
 
 HANDLER(nel) /* NEL - Next Line */
-    cr(v, p, w, 0, NULL);
-    ind(v, p, w, 0, NULL);
+    cr(v, p, w, 0, 0, NULL);
+    ind(v, p, w, 0, 0, NULL);
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
     if (n->lnm)
-        nel(v, p, w, 0, NULL);
+        nel(v, p, w, 0, 0, NULL);
     else
-        ind(v, p, w, 0, NULL);
+        ind(v, p, w, 0, 0, NULL);
 ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
@@ -571,12 +569,12 @@ ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
     if (n->insert)
-        ich(v, p, L'@', 0, NULL);
+        ich(v, p, L'@', 0, 0, NULL);
 
     if (n->xenl){
         n->xenl = false;
         if (n->am)
-            nel(v, p, L'\n', 0, NULL);
+            nel(v, p, L'\n', 0, 0, NULL);
         getyx(win, y, x);
     }
 
@@ -591,7 +589,7 @@ HANDLER(print) /* Print a character to the terminal */
 HANDLER(rep) /* REP - Repeat Character */
     if (n->repc){
         for (int i = 0; i < P1(0); i++)
-            print(v, p, n->repc, 0, NULL);
+            print(v, p, n->repc, 0, 0, NULL);
     }
 ENDHANDLER
 
@@ -873,7 +871,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
-    csr(n->vp, n, L'r', 0, NULL);
+    csr(n->vp, n, L'r', 0, 0, NULL);
     wmove(n->win, oy, ox);
     wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);

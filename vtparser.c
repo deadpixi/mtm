@@ -92,12 +92,12 @@ param(VTPARSER *v, wchar_t w)
     }
 }
 
-#define DO(k, t, f, n, a)            \
-    static void                      \
-    do ## k (VTPARSER *v, wchar_t w) \
-    {                                \
-        if (t)                       \
-            f (v, v->p, w, n, a);    \
+#define DO(k, t, f, n, a)                   \
+    static void                             \
+    do ## k (VTPARSER *v, wchar_t w)        \
+    {                                       \
+        if (t)                              \
+            f (v, v->p, w, v->inter, n, a); \
     }
 
 DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)

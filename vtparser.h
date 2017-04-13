@@ -42,7 +42,8 @@
 /**** DATA TYPES */
 typedef struct VTPARSER VTPARSER;
 
-typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, int argc, int *argv);
+typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
+                           int argc, int *argv);
 
 typedef enum{
     VTPARSER_CONTROL,
