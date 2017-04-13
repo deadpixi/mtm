@@ -314,6 +314,10 @@ HANDLER(scs) /* SCS - Select Character Set */
     }
 ENDHANDLER
 
+HANDLER(smir) /* SMIR - Enter or Exit Insert Mode */
+    n->insert = !n->insert;
+ENDHANDLER
+
 HANDLER(tbc) /* TBC - Tabulation Clear */
     switch (P0(0)){
         case 0: n->tabs[x] = false;                            break;
@@ -605,6 +609,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'2', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'6', smir);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
