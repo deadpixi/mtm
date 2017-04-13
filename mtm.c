@@ -479,13 +479,21 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         wcolor_set(win, getpair(n->fg, n->bg), NULL);
 }
 
+HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
+    wmove(win, P1(0) - 1, x);
+ENDHANDLER
+
+HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
+    wmove(win, y, P1(0) - 1);
+ENDHANDLER
+
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
     for (int i = x - 1; i >= 0; i--) if (n->tabs[i]){
         wmove(win, y, i);
         return;
     }
     wmove(win, y, 0);
-}
+ENDHANDLER
 
 HANDLER(ht) /* HT - Horizontal Tab */
     for (int i = x + 1; i < n->w; i++) if (n->tabs[i]){
@@ -563,6 +571,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'G', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'I', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
@@ -572,7 +581,9 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
