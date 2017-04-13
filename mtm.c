@@ -247,6 +247,11 @@ HANDLER(bell) /* Terminal bell. */
     beep();
 ENDHANDLER
 
+HANDLER(su) /* SU - Scroll Up/Down */
+    int c = (w == L'T' || w == L'^')? -P1(0) : P1(0);
+    wscrl(win, c);
+ENDHANDLER
+
 HANDLER(cup) /* CUP - Cursor Position */
     n->xenl = false;
     wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
@@ -612,9 +617,12 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'S', su);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'T', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'b', rep);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
