@@ -168,6 +168,8 @@ safewrite(int fd, const char *b, size_t n) /* Write, checking for errors. */
         ssize_t s = write(fd, b + w, n - w);
         if (s < 0 && errno != EINTR)
             return;
+        else
+            s = 0;
         w += (size_t)s;
     }
 }
@@ -240,7 +242,7 @@ getshell(void) /* Get the user's preferred shell. */
     {                                                           \
         COMMONVARS
 #define ENDHANDLER                                              \
-        n->repc = 0;                                            \
+        n->repc = 0; /* control sequences cannot be repeated */ \
     }
 
 HANDLER(bell) /* Terminal bell. */
