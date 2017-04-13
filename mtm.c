@@ -495,8 +495,16 @@ HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
     wmove(win, MIN(n->bot - 1, MAX(n->top, P1(0) - 1)), x);
 ENDHANDLER
 
+HANDLER(vpr) /* VPR - Cursor Vertical Relative */
+    wmove(win, MIN(n->bot - 1, MAX(n->top, y + P1(0))), x);
+ENDHANDLER
+
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
-    wmove(win, y, P1(0) - 1);
+    wmove(win, y, MIN(P1(0) - 1, mx - 1));
+ENDHANDLER
+
+HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
+    wmove(win, y, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
@@ -596,8 +604,10 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
