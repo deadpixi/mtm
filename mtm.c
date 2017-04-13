@@ -50,7 +50,7 @@ struct NODE{
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, ckm, am, lnm, *tabs;
+    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, *tabs;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
@@ -447,6 +447,7 @@ HANDLER(mode) /* Set or Reset Mode */
         case  4: n->insert = set;                             break;
         case  6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
         case  7: n->am = set;                                 break;
+        case 12: n->srm = set;                                break;
         case 20: n->lnm = set;                                break;
         case 25: n->vis = set;                                break;
     }
@@ -463,7 +464,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
-    n->ckm = n->am = true;
+    n->ckm = n->am = n->srm = true;
     n->top = 0;
     n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
@@ -758,7 +759,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->vis = 1;
     n->top = 0;
     n->bot = h;
-    n->am = n->ckm = true;
+    n->am = n->ckm = n->srm = true;
     n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
@@ -1010,6 +1011,8 @@ handlechar(int k) /* Handle a single input character. */
     DO(true,  REDRAW,        draw(root))
     char c[] = {(char)k, 0};
     SEND(focused, c);
+    if (!focused->srm)
+        print(focused->vp, focused, (wchar_t)k, 0, 0, NULL);
     return cmd = false, true;
 }
 
