@@ -480,7 +480,7 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
 }
 
 HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
-    wmove(win, P1(0) - 1, x);
+    wmove(win, MIN(n->bot - 1, MAX(n->top, P1(0) - 1)), x);
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
