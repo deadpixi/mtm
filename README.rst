@@ -10,23 +10,22 @@ Simplicity
     modes, no dozens of commands, no crazy feature list.
 
 Compatibility
-    mtm emulates a classic ANSI text terminal.
-    That means it should work out of the box on essentially all
-    terminfo/termcap-based systems (even pretty old ones), without needing
-    to install a new termcap entry.
+    mtm emulates a classic ANSI text terminal.  That means it should
+    work out of the box on essentially all terminfo/termcap-based systems
+    (even pretty old ones), without needing to install a new termcap entry.
 
-    Additionally, mtm emulates a classic DEC VT100 fairly well.
-    This venerable terminal is essentially universally supported.
-    For more information, see `Compatibility`_ below.
+    Additionally, mtm emulates a classic DEC VT100 fairly well.  This
+    venerable terminal is essentially universally supported.  For more
+    information, see `Compatibility`_ below.
 
 Size
     mtm is small.
     The entire project is around 1000 lines of code.
 
 Stability
-    mtm is "finished" as it is now.
-    You don't need to worry about it changing on you unexpectedly.
-    The only changes that can happen at this point are:
+    mtm is "finished" as it is now.  You don't need to worry about it
+    changing on you unexpectedly.  The only changes that can happen at
+    this point are:
 
     - Bug fixes.
     - Translation improvements.
@@ -67,12 +66,12 @@ Usage is simple::
 The `-b` flag tells mtm to not alias the backspace and delete keys.
 The default terminal advertisement, `eterm-color` expects the backspace
 key to send the same code as the delete key, but many other terminals
-(notably the VT100) expect backspace to send backspace. You probably
-don't need to worry about this option.
+(notably the VT100) expect backspace to send backspace. You probably don't
+need to worry about this option.
 
 The `-t` flag tells mtm what terminal type to advertise itself as.
-Note that this doesn't change how mtm interprets control sequences;
-it simply controls what the `TERM` environment variable is set to.
+Note that this doesn't change how mtm interprets control sequences; it
+simply controls what the `TERM` environment variable is set to.
 
 The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
@@ -122,21 +121,19 @@ Screenshots
 
 Compatibility
 =============
-(Note that you only need to read this section if you're curious.
-mtm should just work out-of-the-box for you, thanks to the efforts
-of the various hackers over the years to make terminal-independence
-a reality.)
+(Note that you only need to read this section if you're curious.  mtm should
+just work out-of-the-box for you, thanks to the efforts of the various
+hackers over the years to make terminal-independence a reality.)
 
-By default, mtm advertises itself as an `eterm-color` terminal.
-This is the terminal emulated by the Emacs
-`AnsiTerm <https://www.emacswiki.org/emacs/AnsiTerm>`_ package.
-The terminfo definition for this terminal has been in the common
-terminfo database for years, and is widely deployed, meaning it's
-probably already on your system.
+By default, mtm advertises itself as an `eterm-color`
+terminal.  This is the terminal emulated by the Emacs `AnsiTerm
+<https://www.emacswiki.org/emacs/AnsiTerm>`_ package.  The terminfo
+definition for this terminal has been in the common terminfo database for
+years, and is widely deployed, meaning it's probably already on your system.
 
 (Note that this should not be taken to imply that anyone involved in the
-`AnsiTerm` project endorses or otherwise has anything to do with mtm, and
-vice-versa. Their work is excellent, though, and you should definitely
+`AnsiTerm` project endorses or otherwise has anything to do with mtm,
+and vice-versa. Their work is excellent, though, and you should definitely
 check it out.)
 
 That being said, mtm emulates an ANSI text terminal, including various
@@ -151,17 +148,17 @@ an abstraction library (e.g. curses).
 
 The `mtm` Terminal Type
 -----------------------
-mtm comes with a terminfo description file called mtm.ti.
-This file describes all of the features supported by mtm, including such
-features as toggling the visibility of the cursor.
+mtm comes with a terminfo description file called mtm.ti.  This file
+describes all of the features supported by mtm, including such features
+as toggling the visibility of the cursor.
 
-If you want to install this terminal type, use the `tic` compiler that comes
-with ncurses::
+If you want to install this terminal type, use the `tic` compiler that
+comes with ncurses::
 
     tic -s mtm.ti
 
-That command will compile and install the terminfo entry.
-After doing so, calling mtm with `-t mtm`::
+That command will compile and install the terminfo entry.  After doing so,
+calling mtm with `-t mtm`::
 
     mtm -t mtm
 
@@ -169,20 +166,20 @@ will instruct programs to use that terminfo entry.
 
 Using this terminfo entry allows programs to use the full power of mtm's
 terminal emulation, but it is entirely optional. A primary design goal
-of mtm was for it to be completely usable on systems that didn't have
-the mtm terminfo entry installed.
+of mtm was for it to be completely usable on systems that didn't have the
+mtm terminfo entry installed.
 
 A Note on VT100 Compatibility
 -----------------------------
-mtm emulates the venerable VT100 terminal fairly well,
-meaning that if your system doesn't have an `eterm-color` or `mtm`
-terminfo entry, you can tell mtm (via the `-t` flag) to
-advertise itself as a VT100 and things should just work.
+mtm emulates the venerable VT100 terminal fairly well, meaning that if your
+system doesn't have an `eterm-color` or `mtm` terminfo entry, you can tell
+mtm (via the `-t` flag) to advertise itself as a VT100 and things should
+just work.
 
-(mtm even gets some of the hairier VT100 features, like the newline glitch and
-mixing controls with escape sequences right. The only features it doesn't do
-are those that can't be done portably via curses, like terminal resizing,
-inverted palettes, and double-width/double-height lines.)
+(mtm even gets some of the hairier VT100 features, like the newline glitch
+and mixing controls with escape sequences right. The only features it
+doesn't do are those that can't be done portably via curses, like terminal
+resizing, inverted palettes, and double-width/double-height lines.)
 
 Copyright and License
 =====================
