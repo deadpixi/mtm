@@ -610,6 +610,10 @@ HANDLER(rep) /* REP - Repeat Character */
     }
 ENDHANDLER
 
+HANDLER(flipirm) /* IRM - Toggle Insertion Replacement Mode */
+    n->insert = !n->insert;
+ENDHANDLER
+
 static void
 setupevents(NODE *n) /* Wire up escape sequences to functions. */
 {
@@ -660,6 +664,7 @@ setupevents(NODE *n) /* Wire up escape sequences to functions. */
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'2', scs);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'6', flipirm);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
