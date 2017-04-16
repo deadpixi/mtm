@@ -87,7 +87,7 @@ param(VTPARSER *v, wchar_t w)
         v->args[v->narg++] = 0;
     else if (v->narg < MAXPARAM){
         v->narg = v->narg? v->narg : 1;
-        if (v->args[v->narg - 1 ] < 9999)
+        if (v->args[v->narg - 1] < 9999)
             v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
     }
 }
