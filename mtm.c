@@ -48,14 +48,14 @@ typedef struct NODE NODE;
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
-    int y, x, sy, sx, h, w, pt, vis, bot, top;
+    int y, x, sy, sx, h, w, pt, vis, bot, top, dca, dcy;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, *tabs;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win;
-    VTPARSER *vp;
+    VTPARSER *vp, *vp100, *vp52;
 };
 
 typedef struct COLORTABLE COLORTABLE;
@@ -261,6 +261,11 @@ HANDLER(sl) /* SL/SR - Scroll Left or Right */
     wmove(win, y, x);
 ENDHANDLER
 
+HANDLER(dca) /* DCA - Direct Cursor Address */
+    n->xenl = false;
+    n->dca = 1;
+ENDHANDLER
+
 HANDLER(cup) /* CUP - Cursor Position */
     n->xenl = false;
     wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
@@ -366,6 +371,10 @@ HANDLER(decaln) /* DECALN - DEC Alignment Test */
     wmove(win, y, x);
 ENDHANDLER
 
+HANDLER(way) /* WAY - Who Are You? */
+    SEND(n, "\033/Z");
+ENDHANDLER
+
 HANDLER(decid) /* DECID - Identify Terminal */
     SEND(n, w == L'c'? "\033[?1;2c" : "\033[?6c");
 ENDHANDLER
@@ -439,10 +448,16 @@ HANDLER(numkp) /* Application/Numeric Keypad Mode */
     n->ckm = (w == L'=');
 ENDHANDLER
 
+HANDLER(go100) /* Switch back to VT100/ANSI mode */
+    n->dca = -1;
+    n->vp = n->vp100;
+ENDHANDLER
+
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
         case  1: n->ckm = set;                                break;
+        case  2: n->vp = n->vp52;                             break;
         case  3: werase(win); wmove(win, 0, 0);               break;
         case  4: n->insert = set;                             break;
         case  6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
@@ -581,7 +596,12 @@ HANDLER(pnl) /* NL - Newline */
 ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
-    n->gc = (w == 0x0e)? n->g1 : n->g0;
+    switch (w){
+        case 0x0e: n->gc = n->g1;   break;
+        case 0x0f: n->gc = n->g0;   break;
+        case L'F': n->gc = n->g1;   break; /* FIXME - different set */
+        case L'G': n->gc = n->g0;   break;
+    }
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
@@ -603,6 +623,14 @@ HANDLER(print) /* Print a character to the terminal */
     wnoutrefresh(win);
 } /* we don't use ENDHANDLER here because we don't want to clear repc */
 
+HANDLER(print52) /* Print a character, but handle movement too. */
+    switch (n->dca){ /* Handle VT52 movement. */
+        case 1: n->dcy = (n->decom? n->top : 0) + (w - 040); n->dca--; return;
+        case 0: n->dca--; wmove(win, n->dcy, w - 040);                 return;
+    }
+    print(v, p, w, iw, argc, argv);
+ENDHANDLER
+
 HANDLER(rep) /* REP - Repeat Character */
     if (n->repc){
         for (int i = 0; i < P1(0); i++)
@@ -617,67 +645,94 @@ ENDHANDLER
 static void
 setupevents(NODE *n) /* Wire up escape sequences to functions. */
 {
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x05, ack);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, tab);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0e, so);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0f, so);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuuorsr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'E', cnl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'F', cpl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'G', hpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'I', tab);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'K', el);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'S', su);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'T', su);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'X', ech);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', slorich);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'b', rep);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'x', decreqtparm);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'2', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'6', flipirm);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'B', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'E', nel);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'H', hts);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'=', numkp);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'>', numkp);
-    vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
+    /* VT100/ANSI mode */
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x05, ack);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x07, bell);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x08, cub);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x09, tab);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0a, pnl);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0b, pnl);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0c, pnl);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0d, cr);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0e, so);
+    vtparser_onevent(n->vp100, VTPARSER_CONTROL, 0x0f, so);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'A', cuuorsr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'B', cud);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'C', cuf);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'D', cub);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'E', cnl);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'F', cpl);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'G', hpa);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'H', cup);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'I', tab);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'J', ed);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'K', el);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'L', idl);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'M', idl);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'P', dch);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'S', su);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'T', su);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'X', ech);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'Z', tab);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'@', slorich);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'`', hpa);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'^', su);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'a', hpr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'b', rep);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'c', decid);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'd', vpa);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'e', vpr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'f', cup);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'g', tbc);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'h', mode);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'l', mode);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'm', sgr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'n', dsr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'r', csr);
+    vtparser_onevent(n->vp100, VTPARSER_CSI,     L'x', decreqtparm);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'0', scs);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'1', scs);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'2', scs);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'6', flipirm);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'7', sc);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'8', rcordecaln);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'A', scs);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'B', scs);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'D', ind);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'E', nel);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'H', hts);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'M', ri);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'Z', decid);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'c', ris);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'=', numkp);
+    vtparser_onevent(n->vp100, VTPARSER_ESCAPE,  L'>', numkp);
+    vtparser_onevent(n->vp100, VTPARSER_PRINT,   0,    print);
+
+    /* VT52 mode */
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x05, ack);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x07, bell);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x08, cub);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x09, tab);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0a, pnl);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0b, pnl);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0c, pnl);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0d, cr);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0e, so);
+    vtparser_onevent(n->vp52, VTPARSER_CONTROL, 0x0f, so);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'A', cuuorsr);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'B', cud);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'C', cuf);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'D', cub);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'F', so);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'G', so);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'H', cup);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'I', ri);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'J', ed);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'K', el);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'Y', dca);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'Z', way);
+    vtparser_onevent(n->vp52, VTPARSER_ESCAPE,  L'<', go100);
+    vtparser_onevent(n->vp52, VTPARSER_PRINT,   0,    print52);
 }
 
 /*** MTM FUNCTIONS
@@ -725,8 +780,10 @@ freenode(NODE *n, bool recurse) /* Free a node. */
     if (n){
         if (n->win)
             delwin(n->win);
-        if (n->vp)
-            vtparser_close(n->vp);
+        if (n->vp100)
+            vtparser_close(n->vp100);
+        if (n->vp52)
+            vtparser_close(n->vp52);
         if (recurse)
             freenode(n->c1, true);
         if (recurse)
@@ -760,7 +817,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (!n)
         return NULL;
 
-    n->fg = n->bg = -1;
+    n->fg = n->bg = n->dca = -1;
     n->vis = 1;
     n->top = 0;
     n->bot = h;
@@ -772,8 +829,11 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (!n->win)
         return freenode(n, false), NULL;
 
-    n->vp = vtparser_open(n);
-    if (!n)
+    n->vp = n->vp100 = vtparser_open(n);
+    if (!n->vp)
+        return freenode(n, false), NULL;
+    n->vp52 = vtparser_open(n);
+    if (!n->vp52)
         return freenode(n, false), NULL;
     setupevents(n);
 
@@ -988,6 +1048,16 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
     return true;
 }
 
+static const char *
+sendarrow(const NODE *n, const char *k)
+{
+    const char *i = (n->vp == n->vp52)? "" : n->ckm? "O" : "[";
+    static char buf[5] = {0};
+
+    snprintf(buf, 4, "\033%s%s", i, k);
+    return buf;
+}
+
 static bool
 handlechar(int k) /* Handle a single input character. */
 {
@@ -997,10 +1067,10 @@ handlechar(int k) /* Handle a single input character. */
     DO(cmd,   KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
     DO(cmd,   KEY_DC,        SEND(focused, "\177"))
     DO(false, '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
-    DO(false, KEY_UP,        SEND(focused, focused->ckm? "\033OA" : "\033[A"))
-    DO(false, KEY_DOWN,      SEND(focused, focused->ckm? "\033OB" : "\033[B"))
-    DO(false, KEY_RIGHT,     SEND(focused, focused->ckm? "\033OC" : "\033[C"))
-    DO(false, KEY_LEFT,      SEND(focused, focused->ckm? "\033OD" : "\033[D"))
+    DO(false, KEY_UP,        SEND(focused, sendarrow(focused, "A")))
+    DO(false, KEY_DOWN,      SEND(focused, sendarrow(focused, "B")))
+    DO(false, KEY_RIGHT,     SEND(focused, sendarrow(focused, "C")))
+    DO(false, KEY_LEFT,      SEND(focused, sendarrow(focused, "D")))
     DO(false, KEY_HOME,      SEND(focused, "\033[1~"))
     DO(false, KEY_END,       SEND(focused, "\033[4~"))
     DO(false, KEY_PPAGE,     SEND(focused, "\033[5~"))
