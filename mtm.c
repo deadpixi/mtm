@@ -52,7 +52,7 @@ struct NODE{
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, *tabs;
     wchar_t repc;
-    PRINTER g0, g1, gc, gs;
+    PRINTER g0, g1, gc, gs, gs100;
     attr_t sattr;
     WINDOW *win;
     VTPARSER *vp, *vp100, *vp52;
@@ -108,7 +108,7 @@ cset_uk(WINDOW *win, wchar_t w)
     w == L'#'? (void)wadd_wchnstr(win, WACS_STERLING, 1) : cset_ascii(win, w);
 }
 
-/* Graphics Character Set */
+/* Graphics Character Sets */
 static void
 cset_graphics(WINDOW *win, wchar_t w)
 {
@@ -146,6 +146,27 @@ cset_graphics(WINDOW *win, wchar_t w)
         case L'k': wadd_wchnstr(win, WACS_URCORNER, 1); return;
         case L'x': wadd_wchnstr(win, WACS_VLINE, 1);    return;
         default:   cset_ascii(win, w);                  return;
+    };
+}
+
+static void
+cset_vt52graphics(WINDOW *win, wchar_t w)
+{
+    switch (w){
+        case L'a': wadd_wchnstr(win, WACS_BLOCK, 1);    return;
+        case L'f': wadd_wchnstr(win, WACS_DEGREE, 1);   return;
+        case L'g': wadd_wchnstr(win, WACS_PLMINUS, 1);  return;
+        case L'h': wadd_wchnstr(win, WACS_RARROW, 1);   return;
+        case L'k': wadd_wchnstr(win, WACS_DARROW, 1);   return;
+        case L'l': wadd_wchnstr(win, WACS_S1, 1);       return;
+        case L'm': wadd_wchnstr(win, WACS_S1, 1);       return;
+        case L'n': wadd_wchnstr(win, WACS_S3, 1);       return;
+        case L'o': wadd_wchnstr(win, WACS_S3, 1);       return;
+        case L'p': wadd_wchnstr(win, WACS_S7, 1);       return;
+        case L'q': wadd_wchnstr(win, WACS_S7, 1);       return;
+        case L'r': wadd_wchnstr(win, WACS_S9, 1);       return;
+        case L's': wadd_wchnstr(win, WACS_S9, 1);       return;
+        default:   cset_graphics(win, w);               return;
     };
 }
 
@@ -450,6 +471,7 @@ ENDHANDLER
 
 HANDLER(go100) /* Switch back to VT100/ANSI mode */
     n->dca = -1;
+    n->gc = n->gs100;
     n->vp = n->vp100;
 ENDHANDLER
 
@@ -457,7 +479,7 @@ HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
         case  1: n->ckm = set;                                break;
-        case  2: n->vp = n->vp52;                             break;
+        case  2: n->vp = n->vp52; n->gs100 = n->gc;           break;
         case  3: werase(win); wmove(win, 0, 0);               break;
         case  4: n->insert = set;                             break;
         case  6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
@@ -597,10 +619,10 @@ ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
     switch (w){
-        case 0x0e: n->gc = n->g1;   break;
-        case 0x0f: n->gc = n->g0;   break;
-        case L'F': n->gc = n->g1;   break; /* FIXME - different set */
-        case L'G': n->gc = n->g0;   break;
+        case 0x0e: n->gc = n->g1;             break;
+        case 0x0f: n->gc = n->g0;             break;
+        case L'F': n->gc = cset_vt52graphics; break;
+        case L'G': n->gc = n->g0;             break;
     }
 ENDHANDLER
 
@@ -760,7 +782,7 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
     if (!n || !tabs || h < 2 || w < 2)
         return free(n), free(tabs), NULL;
 
-    n->gc = n->g0 = cset_ascii;
+    n->gs100 = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
     n->t = t;
     n->pt = -1;
