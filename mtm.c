@@ -638,7 +638,7 @@ HANDLER(print) /* Print a character to the terminal */
     }
 
     n->gc(n->win, w);
-    if (wmove(win, y, x + 1) == ERR)
+    if (wmove(win, y, x + wcwidth(w)) == ERR)
         n->xenl = true;
     n->repc = w;
 
