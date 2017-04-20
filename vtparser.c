@@ -175,32 +175,28 @@ writebuf(VTPARSER *vp, const wchar_t *w, size_t n)
         handlechar(vp, w[i]);
 }
 
+static inline wchar_t
+getmbchar(VTPARSER *vp, char c)
+{
+    wchar_t w = 0;
+    mbstate_t ts = vp->ms;
+
+    vp->mb[vp->nmb++] = c;
+    switch (mbrtowc(&w, vp->mb, vp->nmb, &ts)){
+        case (size_t)-1: vp->nmb = 0; return L'?';
+        case (size_t)-2:              return 0;
+    }
+
+    return vp->nmb = 0, w;
+}
+
 void
 vtparser_write(VTPARSER *vp, const char *s, size_t n)
 {
-    size_t nw = 0, p = 0, nb = 0;
-    wchar_t buf[MAXBUF + 1] = {0};
-    n = n? n : strlen(s);
-
-    while (p < n && vp->nmb < MAXBUF){
-        switch (testmbchar(vp)){
-            case (size_t)-1: buf[nw++] = VTPARSER_BAD_CHAR; vp->nmb = 0; break;
-            case (size_t)-2: vp->mb[vp->nmb++] = s[p++];                 break;
-            default:         writembchar(vp, buf + nw++);                break;
-        }
-
-        if (nw > MAXBUF){
-            writebuf(vp, buf, nw);
-            nw = 0;
-            wmemset(buf, 0, MAXBUF + 1);
-        }
-    }
-    writebuf(vp, buf, nw);
-
-    nb = testmbchar(vp); /* we might've finished a char on the last byte */
-    if (nb && nb != (size_t)-1 && nb != (size_t)-2){
-        writembchar(vp, buf);
-        writebuf(vp, buf, 1);
+    for (size_t i = 0; i < n; i++){
+        wchar_t w = getmbchar(vp, s[i]);
+        if (w)
+            handlechar(vp, w);
     }
 }
 
