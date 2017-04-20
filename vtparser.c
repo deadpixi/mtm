@@ -187,7 +187,7 @@ getmbchar(VTPARSER *vp, char c)
         case (size_t)-2:              return 0;
     }
 
-    return vp->nmb = 0, w;
+    return vp->nmb = 0, vp->ms = ts, w;
 }
 
 void
