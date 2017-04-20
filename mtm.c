@@ -15,6 +15,7 @@
  */
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <locale.h>
 #include <pwd.h>
 #include <signal.h>
@@ -1109,10 +1110,14 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  DELETE_NODE_KIND, DELETE_NODE,   deletenode(focused))
     DO(true,  REDRAW_KIND,      REDRAW,        draw(root))
 
-    char c[] = {(char)k, 0};
-    SEND(focused, c);
-    if (!focused->srm)
-        print(focused->vp, focused, (wchar_t)k, 0, 0, NULL);
+    char c[MB_LEN_MAX + 1] = {0};
+    if (wctomb(c, k) > 0){
+        SEND(focused, c);
+
+        if (!focused->srm)
+            print(focused->vp, focused, k, 0, 0, NULL);
+    }
+
     return cmd = false, true;
 }
 
