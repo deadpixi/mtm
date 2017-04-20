@@ -518,10 +518,12 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
     for (int i = 0; i < argc; i++) switch (P0(i)){
         case  0: sgr0(v, p, 0, 0, 0, NULL);           break;
         case  1: wattron(win,  A_BOLD);               break;
+        case  3: wattron(win,  A_ITALIC);             break;
         case  4: wattron(win,  A_UNDERLINE);          break;
         case  5: wattron(win,  A_BLINK);              break;
         case  7: wattron(win,  A_REVERSE);            break;
         case  8: wattron(win,  A_INVIS);              break;
+        case 23: wattroff(win, A_ITALIC);             break;
         case 24: wattroff(win, A_UNDERLINE);          break;
         case 27: wattroff(win, A_REVERSE);            break;
         case 30: n->fg = COLOR_BLACK;   doc = true;   break;
