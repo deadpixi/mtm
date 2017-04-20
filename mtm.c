@@ -1083,31 +1083,32 @@ sendarrow(const NODE *n, const char *k)
 }
 
 static bool
-handlechar(int k) /* Handle a single input character. */
+handlechar(int r, int k) /* Handle a single input character. */
 {
-    #define DO(s, i, a) if (s == cmd && i == k) { a ; cmd = false; return true;}
-    DO(cmd,   ERR,           return false)
-    DO(cmd,   KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
-    DO(cmd,   KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
-    DO(cmd,   KEY_DC,        SEND(focused, "\177"))
-    DO(false, '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
-    DO(false, KEY_UP,        SEND(focused, sendarrow(focused, "A")))
-    DO(false, KEY_DOWN,      SEND(focused, sendarrow(focused, "B")))
-    DO(false, KEY_RIGHT,     SEND(focused, sendarrow(focused, "C")))
-    DO(false, KEY_LEFT,      SEND(focused, sendarrow(focused, "D")))
-    DO(false, KEY_HOME,      SEND(focused, "\033[1~"))
-    DO(false, KEY_END,       SEND(focused, "\033[4~"))
-    DO(false, KEY_PPAGE,     SEND(focused, "\033[5~"))
-    DO(false, KEY_NPAGE,     SEND(focused, "\033[6~"))
-    DO(false, commandkey,    return cmd = true)
-    DO(true,  MOVE_UP,       focus(findnode(root, ABOVE(focused))))
-    DO(true,  MOVE_DOWN,     focus(findnode(root, BELOW(focused))))
-    DO(true,  MOVE_LEFT,     focus(findnode(root, LEFT(focused))))
-    DO(true,  MOVE_RIGHT,    focus(findnode(root, RIGHT(focused))))
-    DO(true,  HSPLIT,        split(focused, HORIZONTAL))
-    DO(true,  VSPLIT,        split(focused, VERTICAL))
-    DO(true,  DELETE_NODE,   deletenode(focused))
-    DO(true,  REDRAW,        draw(root))
+    #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
+    DO(cmd,   ERR,              k,             return false)
+    DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
+    DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
+    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\177"))
+    DO(false, OK,               '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
+    DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, sendarrow(focused, "A")))
+    DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, sendarrow(focused, "B")))
+    DO(false, KEY_CODE_YES,     KEY_RIGHT,     SEND(focused, sendarrow(focused, "C")))
+    DO(false, KEY_CODE_YES,     KEY_LEFT,      SEND(focused, sendarrow(focused, "D")))
+    DO(false, KEY_CODE_YES,     KEY_HOME,      SEND(focused, "\033[1~"))
+    DO(false, KEY_CODE_YES,     KEY_END,       SEND(focused, "\033[4~"))
+    DO(false, KEY_CODE_YES,     KEY_PPAGE,     SEND(focused, "\033[5~"))
+    DO(false, KEY_CODE_YES,     KEY_NPAGE,     SEND(focused, "\033[6~"))
+    DO(false, OK,               commandkey,    return cmd = true)
+    DO(true,  MOVE_UP_KIND,     MOVE_UP,       focus(findnode(root, ABOVE(focused))))
+    DO(true,  MOVE_DOWN_KIND,   MOVE_DOWN,     focus(findnode(root, BELOW(focused))))
+    DO(true,  MOVE_LEFT_KIND,   MOVE_LEFT,     focus(findnode(root, LEFT(focused))))
+    DO(true,  MOVE_RIGHT_KIND,  MOVE_RIGHT,    focus(findnode(root, RIGHT(focused))))
+    DO(true,  HSPLIT_KIND,      HSPLIT,        split(focused, HORIZONTAL))
+    DO(true,  VSPLIT_KIND,      VSPLIT,        split(focused, VERTICAL))
+    DO(true,  DELETE_NODE_KIND, DELETE_NODE,   deletenode(focused))
+    DO(true,  REDRAW_KIND,      REDRAW,        draw(root))
+
     char c[] = {(char)k, 0};
     SEND(focused, c);
     if (!focused->srm)
@@ -1119,10 +1120,14 @@ static void
 run(void) /* Run MTM. */
 {
     while (root){
+        wint_t w = 0;
         fd_set sfds = fds;
         if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
             FD_ZERO(&sfds);
-        while (handlechar(wgetch(focused->win))) ;
+
+        int r = wget_wch(focused->win, &w);
+        while (handlechar(r, w))
+            r = wget_wch(focused->win, &w);
         getinput(root, &sfds);
         doupdate();
         fixcursor();

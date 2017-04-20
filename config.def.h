@@ -9,20 +9,29 @@
 #define COMMAND_KEY 'g'
 
 /* The change focus keys. */
-#define MOVE_UP    KEY_UP
-#define MOVE_DOWN  KEY_DOWN
-#define MOVE_RIGHT KEY_RIGHT
-#define MOVE_LEFT  KEY_LEFT
+#define MOVE_UP         KEY_UP
+#define MOVE_DOWN       KEY_DOWN
+#define MOVE_RIGHT      KEY_RIGHT
+#define MOVE_LEFT       KEY_LEFT
+
+#define MOVE_UP_KIND    KEY_CODE_YES
+#define MOVE_DOWN_KIND  KEY_CODE_YES
+#define MOVE_RIGHT_KIND KEY_CODE_YES
+#define MOVE_LEFT_KIND  KEY_CODE_YES
 
 /* The split terminal keys. */
-#define HSPLIT 'h'
-#define VSPLIT 'v'
+#define HSPLIT      L'h'
+#define VSPLIT      L'v'
+#define HSPLIT_KIND OK
+#define VSPLIT_KIND OK
 
 /* The delete terminal key. */
-#define DELETE_NODE 'w'
+#define DELETE_NODE      L'w'
+#define DELETE_NODE_KIND OK
 
 /* The force redraw key. */
-#define REDRAW 'l'
+#define REDRAW      L'l'
+#define REDRAW_KIND OK
 
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
