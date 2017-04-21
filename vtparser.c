@@ -31,8 +31,6 @@
 /**** FORWARD DECLARATIONS */
 typedef struct ACTION ACTION;
 typedef struct STATE STATE;
-static STATE ground, escape, escape_intermediate, csi_entry,
-             csi_ignore, csi_param, csi_intermediate;
 
 /**** DATA TYPES */
 #define MAXBUF      100
@@ -59,6 +57,10 @@ struct STATE{
     void (*entry)(VTPARSER *v);
     ACTION actions[MAXACTIONS];
 };
+
+/**** GLOBALS */
+static STATE ground, escape, escape_intermediate, csi_entry,
+             csi_ignore, csi_param, csi_intermediate;
 
 /**** ACTION FUNCTIONS */
 static void
