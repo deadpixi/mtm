@@ -206,6 +206,7 @@ getpair(short f, short b) /* Get a curses color pair number given a fg/bg. */
             ctable[i].b = b;
             init_pair(i, f, b);
         }
+
         if (ctable[i].f == f && ctable[i].b == b)
             return i;
     }
