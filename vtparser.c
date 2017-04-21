@@ -154,27 +154,6 @@ handlechar(VTPARSER *vp, wchar_t w)
     }
 }
 
-static inline size_t
-testmbchar(VTPARSER *vp)
-{
-    mbstate_t ts = vp->ms;
-    return vp->nmb? mbrtowc(NULL, vp->mb, vp->nmb, &ts) : (size_t)-2;
-}
-
-static inline void
-writembchar(VTPARSER *vp, wchar_t *c)
-{
-    mbrtowc(c, vp->mb, vp->nmb, &vp->ms);
-    vp->nmb = 0;
-}
-
-static inline void
-writebuf(VTPARSER *vp, const wchar_t *w, size_t n)
-{
-    for (size_t i = 0; i < n; i++)
-        handlechar(vp, w[i]);
-}
-
 static inline wchar_t
 getmbchar(VTPARSER *vp, char c)
 {
