@@ -34,7 +34,7 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-t NAME] [-c KEY]"
+#define USAGE "usage: mtm [-b] [-t NAME] [-c KEY]"
 
 /*** DATA TYPES */
 typedef void (*PRINTER)(WINDOW *win, wchar_t w);
