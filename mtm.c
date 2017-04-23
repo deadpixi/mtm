@@ -631,7 +631,7 @@ HANDLER(so) /* SO/SI - Switch Out/In character set */
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
-    if (wcwidth(w) <= 0)
+    if (wcwidth(w) < 0)
         return;
 
     if (n->insert)
