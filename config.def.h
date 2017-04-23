@@ -1,6 +1,8 @@
 /* The following definitions change the keys used to send commands
  * to mtm. In all cases, the value must be something that ncurses's
- * getch(3) function could return.
+ * getch(3) function could return. The _KIND macros denote whether
+ * the key is a special key (KEY_CODE_YES), or a regular (but possibly
+ * wide) character (OK).
  */
 
 /* The default command prefix key, when modified by cntrl.
