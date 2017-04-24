@@ -973,12 +973,13 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     int oy, ox;
     struct winsize ws = {.ws_row = h, .ws_col = w};
     bool *tabs = newtabs(w, n->w, n->tabs);
-    if (!tabs)
-        return;
+
+    if (tabs){
+        free(n->tabs);
+        n->tabs = tabs;
+    }
 
     getyx(n->win, oy, ox);
-    free(n->tabs);
-    n->tabs = tabs;
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
