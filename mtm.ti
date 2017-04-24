@@ -1,5 +1,5 @@
 mtm|Micro Terminal Multiplexer,
-	am, xenl, mir, msgr, cols#80, it#8, lines#24, colors#8, pairs#64,
+	am, xenl, mir, msgr, cols#80, it#8, lines#24, colors#8, pairs#64, npc,
 	cbt=\E[Z, cr=^M, csr=\E[%i%p1%d;%p2%dr, tbc=\E[3g, clear=\E[H\E[J,
 	el=\E[K, ed=\E[J, hpa=\E[%p1%{1}%+%dG, cup=\E[%i%p1%d;%p2%dH,
 	cud1=\E[B, home=\E[H, civis=\E[?25l, cub1=\E[D, cnorm=\E[?25h,
