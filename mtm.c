@@ -69,7 +69,7 @@ struct COLORTABLE{
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool cmd, kbs;
+static bool cmd, kbs, mouse;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -1088,12 +1088,24 @@ sendarrow(const NODE *n, const char *k)
     return buf;
 }
 
+static void
+handleclick(void)
+{
+    MEVENT e;
+    if (getmouse(&e) != OK)
+        return;
+
+    if (e.bstate & BUTTON1_CLICKED)
+        focus(findnode(root, e.y, e.x));
+}
+
 static bool
 handlechar(int r, int k) /* Handle a single input character. */
 {
     #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
+    DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     handleclick());
     DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
     DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\177"))
     DO(false, OK,               '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
@@ -1155,7 +1167,7 @@ main(int argc, char **argv)
         case 'b': kbs = true;                  break;
         case 'c': commandkey = CTL(optarg[0]); break;
         case 't': term = optarg;               break;
-        case 'm': /* ignored */                break;
+        case 'm': mouse = true;                break;
         case 'u': /* ignored */                break;
         default:  quit(EXIT_FAILURE, USAGE);   break;
     }
@@ -1166,6 +1178,9 @@ main(int argc, char **argv)
     intrflush(stdscr, FALSE);
     start_color();
     use_default_colors();
+    if (mouse)
+        mousemask(ALL_MOUSE_EVENTS, NULL);
+
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     draw(root);
     run();
