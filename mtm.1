@@ -154,6 +154,29 @@ obviously
 .Pc
 likewise not be available to programs run under
 .Nm mtm "."
+.Pp
+Note that in some
+.Xr terminfo 5
+databases,
+the default
+.Em xterm
+entries do not describe how to enable mouse position tracking.
+If such tracking is needed,
+setting the host terminal type
+.Po
+via the host's
+.Ev TERM
+environment variable or via the
+.Fl T
+option
+.Pc
+to something else
+.Po
+often
+.Em xterm-1003
+or similar
+.Pc
+may help.
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
