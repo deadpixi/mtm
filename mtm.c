@@ -34,7 +34,7 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-b] [-t NAME] [-c KEY]"
+#define USAGE "usage: mtm [-b] [-m] [-T NAME] [-t NAME] [-c KEY]"
 
 /*** DATA TYPES */
 typedef void (*PRINTER)(WINDOW *win, wchar_t w);
@@ -1163,9 +1163,10 @@ main(int argc, char **argv)
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
     int c = 0;
-    while ((c = getopt(argc, argv, "mubt:c:")) != -1) switch (c){
+    while ((c = getopt(argc, argv, "mubT:t:c:")) != -1) switch (c){
         case 'b': kbs = true;                  break;
         case 'c': commandkey = CTL(optarg[0]); break;
+        case 'T': setenv("TERM", optarg, 1);   break;
         case 't': term = optarg;               break;
         case 'm': mouse = true;                break;
         case 'u': /* ignored */                break;

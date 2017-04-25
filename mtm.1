@@ -9,6 +9,7 @@
 .Op Fl b
 .Op Fl m
 .Op Fl u
+.Op Fl T Ar HOST
 .Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
 .Sh DESCRIPTION
@@ -34,6 +35,15 @@ You probably don't need to use this option.
 Enable mouse support.
 When mouse support is enabled,
 clicking button 1 will focus the virtual terminal under the click.
+.It Fl T Ar HOST
+Assume that the host terminal
+.Po
+i.e. the terminal under which
+.Nm
+is running
+.Pc
+is of type
+.Ar HOST "."
 .It Fl t Ar TERMINAL
 Set the
 .Ev TERM
