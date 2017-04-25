@@ -789,7 +789,7 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
     if (!n || !tabs || h < 2 || w < 2)
         return free(n), free(tabs), NULL;
 
-    n->gs100 = n->gc = n->g0 = cset_ascii;
+    n->gs100 = n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
     n->t = t;
     n->pt = -1;
