@@ -130,6 +130,18 @@ so advertising that
 .Nm
 is a VT100 will cause most programs to stop displaying color.
 The VT100's behavior is almost universally supported.
+.El
+.Ss Host Terminal Capabilities
+.Nm
+presents a consistent set of terminal capabilities to programs run under it.
+However,
+if the host terminal does not support color or mouse tracking,
+those features will
+.Po
+obviously
+.Pc
+likewise not be available to programs run under
+.Nm mtm "."
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
