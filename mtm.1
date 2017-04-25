@@ -30,6 +30,10 @@ this
 e.g. a VT100
 .Pc "."
 You probably don't need to use this option.
+.It Fl m
+Enable mouse support.
+When mouse support is enabled,
+clicking button 1 will focus the virtual terminal under the click.
 .It Fl t Ar TERMINAL
 Set the
 .Ev TERM
@@ -48,10 +52,8 @@ By default this is
 .El
 .Pp
 The
-.Fl m
-and
 .Fl u
-flags are recognized but ignored,
+flag is recognized but ignored,
 for backwards compatibility.
 .Pp
 .Ss Usage
