@@ -16,6 +16,7 @@ mtm|Micro Terminal Multiplexer,
 	ht=^I, acsc=``aaffggjjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
 	enacs=\E(B\E)0, kend=\E[4~, u6=\E[%i%d;%dR, u7=\E[6n, u8=^F, u9=^E,
 	op=\E[39;49m, setaf=\E[3%p1%dm, setab=\E[4%p1%dm, sitm=\E[3m, ritm=\E[23m,
+	XM=\E[?1006;1000%?%p1%{1}%=%th%el%;,
 
 mtm-ic|Micro Terminal Multiplexer with insert character,
     mir@,

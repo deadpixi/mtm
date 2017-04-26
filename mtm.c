@@ -37,6 +37,7 @@
 #define USAGE "usage: mtm [-b] [-m] [-T NAME] [-t NAME] [-c KEY]"
 
 /*** DATA TYPES */
+typedef struct NODE NODE;
 typedef void (*PRINTER)(WINDOW *win, wchar_t w);
 
 typedef enum{
@@ -45,13 +46,19 @@ typedef enum{
     VIEW
 } node_t;
 
-typedef struct NODE NODE;
+typedef enum{
+    MOUSE_NONE          = 0x0,
+    MOUSE_STANDARD      = 0x01,
+    MOUSE_BUTTON_MOTION = 0x02
+} mouse_t;
+
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top, dca, dcy;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, *tabs;
+    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, msgr, *tabs;
+    mouse_t mmode;
     wchar_t repc;
     PRINTER g0, g1, gc, gs, gs100;
     attr_t sattr;
@@ -73,6 +80,8 @@ static bool cmd, kbs, mouse;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
+static int mbuttons;
+
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
 static void reshapechildren(NODE *n);
@@ -480,15 +489,18 @@ ENDHANDLER
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  1: n->ckm = set;                                break;
-        case  2: n->vp = n->vp52; n->gs100 = n->gc;           break;
-        case  3: werase(win); wmove(win, 0, 0);               break;
-        case  4: n->insert = set;                             break;
-        case  6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
-        case  7: n->am = set;                                 break;
-        case 12: n->srm = set;                                break;
-        case 20: n->lnm = set;                                break;
-        case 25: n->vis = set;                                break;
+        case    1: n->ckm = set;                                     break;
+        case    2: n->vp = n->vp52; n->gs100 = n->gc;                break;
+        case    3: werase(win); wmove(win, 0, 0);                    break;
+        case    4: n->insert = set;                                  break;
+        case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL);      break;
+        case    7: n->am = set;                                      break;
+        case   12: n->srm = set;                                     break;
+        case   20: n->lnm = set;                                     break;
+        case   25: n->vis = set;                                     break;
+        case 1000: n->mmode = set? MOUSE_STANDARD : MOUSE_NONE;      break;
+        case 1002: n->mmode = set? MOUSE_BUTTON_MOTION : MOUSE_NONE; break;
+        case 1006: n->msgr = set;                                    break;
     }
 ENDHANDLER
 
@@ -1089,23 +1101,90 @@ sendarrow(const NODE *n, const char *k)
 }
 
 static void
-handleclick(void)
+click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
 {
-    MEVENT e;
-    if (getmouse(&e) != OK)
+    static char buf[100];
+    memset(buf, 0, sizeof(buf));
+
+    if (!n->mmode || !mbuttons)
         return;
 
-    if (e.bstate & BUTTON1_CLICKED)
-        focus(findnode(root, e.y, e.x));
+    wmouse_trafo(n->win, &y, &x, false);
+    b--;
+    x++;
+    y++;
+
+    if (n->msgr)
+        snprintf(buf, 99, "\033[<%d;%d;%d%c", b, x, y, p? 'M' : 'm');
+    else{
+        b  = p? (b + ' ') : (4 + ' ');
+        x += ' ';
+        y += ' ';
+        snprintf(buf, 99, "\033[M%c%c%c", (char)b, (char)x, (char)y);
+    }
+
+    SEND(n, buf);
+}
+
+static void
+handlemouse(MEVENT e) /* handle a mouse event */
+{
+    /* Mouse events to the non-focused view are ignored, except for clicks,
+     * which just set focus.
+     */
+    if (!wenclose(focused->win, e.y, e.x)){
+        if (e.bstate & BUTTON1_CLICKED)
+            focus(findnode(root, e.y, e.x));
+        return;
+    }
+
+    /* Send mouse events. */
+    int c = 1;
+    int b = 0;
+    switch (e.bstate){
+        case REPORT_MOUSE_POSITION: click(focused, 36, true, e.y, e.x);  break;
+        case BUTTON1_PRESSED:       mbuttons++; click(focused,  1, true, e.y, e.x);  break;
+        case BUTTON2_PRESSED:       mbuttons++; click(focused,  2, true, e.y, e.x);  break;
+        case BUTTON3_PRESSED:       mbuttons++; click(focused,  3, true, e.y, e.x);  break;
+        case BUTTON1_RELEASED:      mbuttons--; click(focused,  1, false, e.y, e.x); break;
+        case BUTTON2_RELEASED:      mbuttons--; click(focused,  2, false, e.y, e.x); break;
+        case BUTTON3_RELEASED:      mbuttons--; click(focused,  3, false, e.y, e.x); break;
+
+        /* Simulate multiple clicks for *_CLICKED events by abusing C's
+         * fall-through on switch.
+         */
+        case BUTTON1_TRIPLE_CLICKED: b = b? b : 1;
+        case BUTTON2_TRIPLE_CLICKED: b = b? b : 2;
+        case BUTTON3_TRIPLE_CLICKED: b = b? b : 3;
+            c++;
+
+        case BUTTON1_DOUBLE_CLICKED: b = b? b : 1;
+        case BUTTON2_DOUBLE_CLICKED: b = b? b : 2;
+        case BUTTON3_DOUBLE_CLICKED: b = b? b : 3;
+            c++;
+
+        case BUTTON1_CLICKED: b = b? b : 1;
+        case BUTTON2_CLICKED: b = b? b : 2;
+        case BUTTON3_CLICKED: b = b? b : 3;
+            for (int i = 0; i < c; i++){
+                mbuttons++;
+                click(focused, b, true, e.y, e.x);
+                click(focused, b, false, e.y, e.x);
+                mbuttons--;
+            }
+            break;
+    }
 }
 
 static bool
 handlechar(int r, int k) /* Handle a single input character. */
 {
+    MEVENT e = {0};
+
     #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
-    DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     handleclick());
+    DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     while (getmouse(&e) != ERR) handlemouse(e));
     DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
     DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\177"))
     DO(false, OK,               '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
@@ -1130,7 +1209,6 @@ handlechar(int r, int k) /* Handle a single input character. */
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0){
         SEND(focused, c);
-
         if (!focused->srm)
             print(focused->vp, focused, k, 0, 0, NULL);
     }
@@ -1180,7 +1258,7 @@ main(int argc, char **argv)
     start_color();
     use_default_colors();
     if (mouse)
-        mousemask(ALL_MOUSE_EVENTS, NULL);
+        mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     draw(root);
