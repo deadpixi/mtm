@@ -1,8 +1,8 @@
 /* The following definitions change the keys used to send commands
  * to mtm. In all cases, the value must be something that ncurses's
  * getch(3) function could return. The _KIND macros denote whether
- * the key is a special key (KEY_CODE_YES), or a regular (but possibly
- * wide) character (OK).
+ * the key is a special key (KEY_CODE_YES), or a regular (wide)
+ * character (OK).
  */
 
 /* The default command prefix key, when modified by cntrl.
@@ -37,7 +37,7 @@
 
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
-    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux))
+    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux__))
         #define NCURSESW_INCLUDE_H <curses.h>
     #else
         #define NCURSESW_INCLUDE_H <ncursesw/curses.h>
