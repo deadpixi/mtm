@@ -82,6 +82,7 @@ static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
 static int cbutton; /* currently held-down mouse button */
+static int mreqs; /* number of views requesting mouse position */
 
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
@@ -487,21 +488,39 @@ HANDLER(go100) /* Switch back to VT100/ANSI mode */
     n->vp = n->vp100;
 ENDHANDLER
 
+static void
+requestposmode(NODE *n, bool set)
+{
+    if (set && n->mmode != MOUSE_BUTTON_MOTION){
+        n->mmode = MOUSE_BUTTON_MOTION;
+        mreqs++;
+    } else if (!set && n->mmode == MOUSE_BUTTON_MOTION){
+        n->mmode = MOUSE_NONE;
+        mreqs--;
+    }
+
+    mreqs = mreqs < 0? 0 : mreqs;
+    if (mreqs)
+        mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    else
+        mousemask(ALL_MOUSE_EVENTS, NULL);
+}
+
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case    1: n->ckm = set;                                     break;
-        case    2: n->vp = n->vp52; n->gs100 = n->gc;                break;
-        case    3: werase(win); wmove(win, 0, 0);                    break;
-        case    4: n->insert = set;                                  break;
-        case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL);      break;
-        case    7: n->am = set;                                      break;
-        case   12: n->srm = set;                                     break;
-        case   20: n->lnm = set;                                     break;
-        case   25: n->vis = set;                                     break;
-        case 1000: n->mmode = set? MOUSE_STANDARD : MOUSE_NONE;      break;
-        case 1002: n->mmode = set? MOUSE_BUTTON_MOTION : MOUSE_NONE; break;
-        case 1006: n->msgr = set;                                    break;
+        case    1: n->ckm = set;                                break;
+        case    2: n->vp = n->vp52; n->gs100 = n->gc;           break;
+        case    3: werase(win); wmove(win, 0, 0);               break;
+        case    4: n->insert = set;                             break;
+        case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL); break;
+        case    7: n->am = set;                                 break;
+        case   12: n->srm = set;                                break;
+        case   20: n->lnm = set;                                break;
+        case   25: n->vis = set;                                break;
+        case 1000: n->mmode = set? MOUSE_STANDARD : MOUSE_NONE; break;
+        case 1002: requestposmode(n, set);                      break;
+        case 1006: n->msgr = set;                               break;
     }
 ENDHANDLER
 
@@ -820,6 +839,8 @@ static void
 freenode(NODE *n, bool recurse) /* Free a node. */
 {
     if (n){
+        if (n->t == VIEW)
+            requestposmode(n, false);
         if (n->win)
             delwin(n->win);
         if (n->vp100)
@@ -1268,8 +1289,7 @@ main(int argc, char **argv)
     start_color();
     use_default_colors();
     if (mouse)
-        mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-        /* XXX - only enable position reporting if somebody wants it */
+        mousemask(ALL_MOUSE_EVENTS, NULL);
 
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     draw(root);
