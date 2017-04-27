@@ -1189,7 +1189,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     while (getmouse(&e) != ERR) handlemouse(e));
     DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
-    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\177"))
+    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\033[3~"))
+    DO(cmd,   KEY_CODE_YES,     KEY_IC,        SEND(focused, "\033[2~"))
     DO(false, OK,               '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
     DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, sendarrow(focused, "A")))
     DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, sendarrow(focused, "B")))
