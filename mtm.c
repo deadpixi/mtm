@@ -1106,7 +1106,7 @@ click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
     static char buf[100];
     memset(buf, 0, sizeof(buf));
 
-    if (!n->mmode || !mbuttons)
+    if (!n->mmode || (b == 36 && n->mmode != MOUSE_BUTTON_MOTION) || !mbuttons)
         return;
 
     wmouse_trafo(n->win, &y, &x, false);
@@ -1117,7 +1117,7 @@ click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
     if (n->msgr)
         snprintf(buf, 99, "\033[<%d;%d;%d%c", b, x, y, p? 'M' : 'm');
     else{
-        b  = p? (b + ' ') : (4 + ' ');
+        b  = p? (b + ' ') : (3 + ' ');
         x += ' ';
         y += ' ';
         snprintf(buf, 99, "\033[M%c%c%c", (char)b, (char)x, (char)y);
@@ -1138,17 +1138,20 @@ handlemouse(MEVENT e) /* handle a mouse event */
         return;
     }
 
-    /* Send mouse events. */
+    /* Send mouse events.
+     * XXX - Only enable REPORT_MOUSE_POSITION if at least one client
+     * has requested it.
+     */
     int c = 1;
     int b = 0;
     switch (e.bstate){
-        case REPORT_MOUSE_POSITION: click(focused, 36, true, e.y, e.x);  break;
+        case REPORT_MOUSE_POSITION: click(focused, 36, true, e.y, e.x);              break;
         case BUTTON1_PRESSED:       mbuttons++; click(focused,  1, true, e.y, e.x);  break;
         case BUTTON2_PRESSED:       mbuttons++; click(focused,  2, true, e.y, e.x);  break;
         case BUTTON3_PRESSED:       mbuttons++; click(focused,  3, true, e.y, e.x);  break;
-        case BUTTON1_RELEASED:      mbuttons--; click(focused,  1, false, e.y, e.x); break;
-        case BUTTON2_RELEASED:      mbuttons--; click(focused,  2, false, e.y, e.x); break;
-        case BUTTON3_RELEASED:      mbuttons--; click(focused,  3, false, e.y, e.x); break;
+        case BUTTON1_RELEASED:      click(focused,  1, false, e.y, e.x); mbuttons--; break;
+        case BUTTON2_RELEASED:      click(focused,  2, false, e.y, e.x); mbuttons--; break;
+        case BUTTON3_RELEASED:      click(focused,  3, false, e.y, e.x); mbuttons--; break;
 
         /* Simulate multiple clicks for *_CLICKED events by abusing C's
          * fall-through on switch.
