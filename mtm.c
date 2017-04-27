@@ -1107,11 +1107,14 @@ click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
     static char buf[100];
     memset(buf, 0, sizeof(buf));
 
-    if (!n->mmode || (b == MOTION_NOTIFY && n->mmode != MOUSE_BUTTON_MOTION) || !cbutton)
+    if (!n->mmode || !cbutton)
         return;
 
-    if (b == MOTION_NOTIFY)
+    if (b == MOTION_NOTIFY){
+        if (n->mmode != MOUSE_BUTTON_MOTION)
+            return;
         b = cbutton + MOTION_NOTIFY;
+    }
 
     wmouse_trafo(n->win, &y, &x, false);
     b--;
@@ -1142,24 +1145,23 @@ handlemouse(MEVENT e) /* handle a mouse event */
         return;
     }
 
-    /* Send mouse events.
-     * XXX - Only enable REPORT_MOUSE_POSITION if at least one client
-     * has requested it.
-     */
+    /* Send mouse events by abusing C's fall-through. */
     int c = 1;
     int b = 0;
+    bool p = false;
     switch (e.bstate){
-        case REPORT_MOUSE_POSITION: click(focused, MOTION_NOTIFY, true, e.y, e.x);    break;
-        case BUTTON1_PRESSED:       cbutton = 1; click(focused,  1, true, e.y, e.x);  break;
-        case BUTTON2_PRESSED:       cbutton = 2; click(focused,  2, true, e.y, e.x);  break;
-        case BUTTON3_PRESSED:       cbutton = 3; click(focused,  3, true, e.y, e.x);  break;
-        case BUTTON1_RELEASED:      click(focused,  1, false, e.y, e.x); cbutton = 0; break;
-        case BUTTON2_RELEASED:      click(focused,  2, false, e.y, e.x); cbutton = 0; break;
-        case BUTTON3_RELEASED:      click(focused,  3, false, e.y, e.x); cbutton = 0; break;
+        case BUTTON1_PRESSED:       b = b? b : 1; p = true; cbutton = b;
+        case BUTTON2_PRESSED:       b = b? b : 2; p = true; cbutton = b;
+        case BUTTON3_PRESSED:       b = b? b : 3; p = true; cbutton = b;
+        case REPORT_MOUSE_POSITION: b = b? b : MOTION_NOTIFY; p = true;
+        case BUTTON1_RELEASED:      b = b? b : 1;
+        case BUTTON2_RELEASED:      b = b? b : 2;
+        case BUTTON3_RELEASED:      b = b? b : 3;
+            click(focused, b, p, e.y, e.x);
+            if (!p)
+                cbutton = 0;
+            break;
 
-        /* Simulate multiple clicks for *_CLICKED events by abusing C's
-         * fall-through on switch.
-         */
         case BUTTON1_TRIPLE_CLICKED: b = b? b : 1;
         case BUTTON2_TRIPLE_CLICKED: b = b? b : 2;
         case BUTTON3_TRIPLE_CLICKED: b = b? b : 3;
@@ -1173,12 +1175,12 @@ handlemouse(MEVENT e) /* handle a mouse event */
         case BUTTON1_CLICKED: b = b? b : 1;
         case BUTTON2_CLICKED: b = b? b : 2;
         case BUTTON3_CLICKED: b = b? b : 3;
+            cbutton = b;
             for (int i = 0; i < c; i++){
-                cbutton = b;
                 click(focused, b, true, e.y, e.x);
                 click(focused, b, false, e.y, e.x);
-                cbutton = 0;
             }
+            cbutton = 0;
             break;
     }
 }
@@ -1267,6 +1269,7 @@ main(int argc, char **argv)
     use_default_colors();
     if (mouse)
         mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+        /* XXX - only enable position reporting if somebody wants it */
 
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     draw(root);
