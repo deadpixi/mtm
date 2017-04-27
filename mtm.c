@@ -35,6 +35,7 @@
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
 #define USAGE "usage: mtm [-b] [-m] [-T NAME] [-t NAME] [-c KEY]"
+#define MOTION_NOTIFY 32
 
 /*** DATA TYPES */
 typedef struct NODE NODE;
@@ -80,7 +81,7 @@ static bool cmd, kbs, mouse;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
-static int mbuttons;
+static int cbutton; /* currently held-down mouse button */
 
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
@@ -1106,8 +1107,11 @@ click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
     static char buf[100];
     memset(buf, 0, sizeof(buf));
 
-    if (!n->mmode || (b == 36 && n->mmode != MOUSE_BUTTON_MOTION) || !mbuttons)
+    if (!n->mmode || (b == MOTION_NOTIFY && n->mmode != MOUSE_BUTTON_MOTION) || !cbutton)
         return;
+
+    if (b == MOTION_NOTIFY)
+        b = cbutton + MOTION_NOTIFY;
 
     wmouse_trafo(n->win, &y, &x, false);
     b--;
@@ -1145,13 +1149,13 @@ handlemouse(MEVENT e) /* handle a mouse event */
     int c = 1;
     int b = 0;
     switch (e.bstate){
-        case REPORT_MOUSE_POSITION: click(focused, 36, true, e.y, e.x);              break;
-        case BUTTON1_PRESSED:       mbuttons++; click(focused,  1, true, e.y, e.x);  break;
-        case BUTTON2_PRESSED:       mbuttons++; click(focused,  2, true, e.y, e.x);  break;
-        case BUTTON3_PRESSED:       mbuttons++; click(focused,  3, true, e.y, e.x);  break;
-        case BUTTON1_RELEASED:      click(focused,  1, false, e.y, e.x); mbuttons--; break;
-        case BUTTON2_RELEASED:      click(focused,  2, false, e.y, e.x); mbuttons--; break;
-        case BUTTON3_RELEASED:      click(focused,  3, false, e.y, e.x); mbuttons--; break;
+        case REPORT_MOUSE_POSITION: click(focused, MOTION_NOTIFY, true, e.y, e.x);    break;
+        case BUTTON1_PRESSED:       cbutton = 1; click(focused,  1, true, e.y, e.x);  break;
+        case BUTTON2_PRESSED:       cbutton = 2; click(focused,  2, true, e.y, e.x);  break;
+        case BUTTON3_PRESSED:       cbutton = 3; click(focused,  3, true, e.y, e.x);  break;
+        case BUTTON1_RELEASED:      click(focused,  1, false, e.y, e.x); cbutton = 0; break;
+        case BUTTON2_RELEASED:      click(focused,  2, false, e.y, e.x); cbutton = 0; break;
+        case BUTTON3_RELEASED:      click(focused,  3, false, e.y, e.x); cbutton = 0; break;
 
         /* Simulate multiple clicks for *_CLICKED events by abusing C's
          * fall-through on switch.
@@ -1170,10 +1174,10 @@ handlemouse(MEVENT e) /* handle a mouse event */
         case BUTTON2_CLICKED: b = b? b : 2;
         case BUTTON3_CLICKED: b = b? b : 3;
             for (int i = 0; i < c; i++){
-                mbuttons++;
+                cbutton = b;
                 click(focused, b, true, e.y, e.x);
                 click(focused, b, false, e.y, e.x);
-                mbuttons--;
+                cbutton = 0;
             }
             break;
     }
