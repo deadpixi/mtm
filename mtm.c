@@ -1113,7 +1113,7 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 }
 
 static const char *
-sendarrow(const NODE *n, const char *k)
+arrow(const NODE *n, const char *k)
 {
     const char *i = (n->vp == n->vp52)? "" : n->ckm? "O" : "[";
     static char buf[5] = {0};
@@ -1219,10 +1219,10 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\033[3~"))
     DO(cmd,   KEY_CODE_YES,     KEY_IC,        SEND(focused, "\033[2~"))
     DO(false, OK,               '\n',          SEND(focused, focused->lnm? "\r\n" : "\r"))
-    DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, sendarrow(focused, "A")))
-    DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, sendarrow(focused, "B")))
-    DO(false, KEY_CODE_YES,     KEY_RIGHT,     SEND(focused, sendarrow(focused, "C")))
-    DO(false, KEY_CODE_YES,     KEY_LEFT,      SEND(focused, sendarrow(focused, "D")))
+    DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, arrow(focused, "A")))
+    DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, arrow(focused, "B")))
+    DO(false, KEY_CODE_YES,     KEY_RIGHT,     SEND(focused, arrow(focused, "C")))
+    DO(false, KEY_CODE_YES,     KEY_LEFT,      SEND(focused, arrow(focused, "D")))
     DO(false, KEY_CODE_YES,     KEY_HOME,      SEND(focused, "\033[1~"))
     DO(false, KEY_CODE_YES,     KEY_END,       SEND(focused, "\033[4~"))
     DO(false, KEY_CODE_YES,     KEY_PPAGE,     SEND(focused, "\033[5~"))
