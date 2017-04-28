@@ -116,10 +116,21 @@ vtparser_open(void *p)
     if (!v)
         return NULL;
 
-    reset(v);
-    v->p = p;
-    v->s = &ground;
+    vtparser_reset(v, p);
     return v;
+}
+
+void
+vtparser_reset(VTPARSER *vp, void *p)
+{
+    reset(vp);
+    vp->s = &ground;
+    vp->p = p;
+
+    vp->print = NULL;
+    memset(vp->cons,  0, sizeof(vp->cons));
+    memset(vp->escs,  0, sizeof(vp->escs));
+    memset(vp->csis,  0, sizeof(vp->csis));
 }
 
 void
