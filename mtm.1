@@ -35,7 +35,17 @@ You probably don't need to use this option.
 .It Fl m
 Enable mouse support.
 When mouse support is enabled,
-clicking button 1 will focus the virtual terminal under the click.
+clicking button 1 will focus the virtual terminal under the click,
+and programs run under
+.Nm
+can request to be advised of mouse events in their virtual terminals.
+.Pp
+Note that enabling mouse support may alter how the host terminal application responds
+to the mouse;
+for example,
+it may require holding down the
+.Dq shift
+key to recognize mouse clicks targeting itself.
 .It Fl T Ar HOST
 Assume that the host terminal
 .Po
@@ -45,6 +55,10 @@ is running
 .Pc
 is of type
 .Ar HOST "."
+By default,
+the contents of the
+.Ev HOST
+environment variable are used.
 .It Fl t Ar TERMINAL
 Set the
 .Ev TERM
