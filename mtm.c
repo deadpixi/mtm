@@ -1295,11 +1295,9 @@ run(void) /* Run MTM. */
         if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
             FD_ZERO(&sfds);
 
-        if (FD_ISSET(STDIN_FILENO, &sfds)){
-            int r = wget_wch(focused->win, &w);
-            while (handlechar(r, w))
-                r = wget_wch(focused->win, &w);
-        }
+        int r = wget_wch(focused->win, &w);
+        while (handlechar(r, w))
+            r = wget_wch(focused->win, &w);
         getinput(root, &sfds);
 
         doupdate();
