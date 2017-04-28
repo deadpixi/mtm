@@ -148,7 +148,12 @@ The VT100's behavior is almost universally supported.
 .Nm
 presents a consistent set of terminal capabilities to programs run under it.
 However,
-if the host terminal does not support color or mouse tracking,
+if the host terminal does not support certain features
+.Po
+e.g. mouse tracking,
+color,
+or blinking text
+.Pc
 those features will
 .Po
 obviously
@@ -174,7 +179,7 @@ option
 to something else
 .Po
 often
-.Em xterm-1003
+.Em xterm-1002
 or similar
 .Pc
 may help.
@@ -213,6 +218,7 @@ and will finally use
 .Pa "/bin/sh" "."
 .Sh SEE ALSO
 .Xr sh 1
+.Xr terminfo 5
 .Sh BUGS
 .Pp
 The mouse-tracking support is still in its preliminary stages.
