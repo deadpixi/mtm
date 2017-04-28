@@ -24,9 +24,10 @@ The options are
 .It Fl b
 Tell
 .Nm
-to not alias the backspace and delete keys.
-This is needed only if you are attempting to emulate a terminal that requires
-this
+to use VT100-style sequences for the backspace and delete keys.
+This is needed only if you instruct
+.Nm
+to advertise itself as some other kind of terminal that sends these sequences
 .Po
 e.g. a VT100
 .Pc "."
