@@ -34,7 +34,7 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-b] [-m] [-T NAME] [-t NAME] [-c KEY]"
+#define USAGE "usage: mtm [-mb] [-T NAME] [-t NAME] [-c KEY]"
 #define MOTION_NOTIFY 32
 
 /*** DATA TYPES */
