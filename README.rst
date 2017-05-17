@@ -53,7 +53,15 @@ Installation and configuration is fairly simple:
 - If you want to change the default keybindings or other compile-time flags,
   copy `config.def.h` to `config.h` and edit the copy. Otherwise the build
   process will use the defaults.
-- Run `make` or `make CURSESLIB=curses`, whichever works for you.
+- Run::
+
+    make
+
+  or::
+
+    make CURSESLIB=curses
+
+  whichever works for you.
 - Run `make install` if desired.
 
 Usage
@@ -61,13 +69,26 @@ Usage
 
 Usage is simple::
 
-    mtm [-b] [-t NAME] [-c KEY]
+    mtm [-mb] [-T NAME] [-t NAME] [-c KEY]
+
+The `-m` flag enables mouse support.  Note that the host terminal obviously
+must support mouse input.  Even terminals that support it natively might
+not advertise such support in their default configuration; this can often
+be fixed by using a different terminfo entry for the host terminal (see the
+`-T` option).
 
 The `-b` flag tells mtm to not alias the backspace and delete keys.
 The default terminal advertisement, `eterm-color` expects the backspace
 key to send the same code as the delete key, but many other terminals
 (notably the VT100) expect backspace to send backspace. You probably don't
 need to worry about this option.
+
+The `-T` flag tells mtm to assume a different kind of host terminal.
+This is useful when a terminal's default terminfo entry does not advertise
+some desired capability. For example, the default `xterm` terminfo entry
+does not advertise mouse motion tracking. If motion tracking is needed,
+telling mtm to assume the `xterm-1002` or `xterm-1003` host terminal type
+(which advertise motion tracking capability) would be useful.
 
 The `-t` flag tells mtm what terminal type to advertise itself as.
 Note that this doesn't change how mtm interprets control sequences; it
@@ -77,7 +98,7 @@ The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
 this is `g`.
 
-mtm also recognizes but ignores the `-m` and `-u` flags, for backwards
+mtm also recognizes but ignores the `-u` flag, for backwards
 compatibility with older versions.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
