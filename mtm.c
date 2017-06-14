@@ -558,6 +558,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
+    n->gc = n->g0;
     n->ckm = n->am = n->srm = true;
     n->top = 0;
     n->bot = n->h;
