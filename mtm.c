@@ -558,7 +558,8 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
-    n->gc = n->g0;
+    n->gs100 = n->gs = n->gc = n->g0 = cset_ascii;
+    n->g1 = cset_graphics;
     n->ckm = n->am = n->srm = true;
     n->top = 0;
     n->bot = n->h;
