@@ -63,7 +63,7 @@ struct NODE{
     wchar_t repc;
     PRINTER g0, g1, gc, gs, gs100;
     attr_t sattr;
-    WINDOW *win;
+    WINDOW *win, *win1, *win2;
     VTPARSER *vp;
 };
 
@@ -564,6 +564,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     sgr0(v, p, 0, 0, 0, NULL);
     wclear(win);
     wmove(win, 0, 0);
+    n->win = n->win1;
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
     n->gs100 = n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
@@ -886,8 +887,10 @@ freenode(NODE *n, bool recurse) /* Free a node. */
     if (n){
         if (n->t == VIEW)
             requestposmode(n, false);
-        if (n->win)
-            delwin(n->win);
+        if (n->win1)
+            delwin(n->win1);
+        if (n->win2)
+            delwin(n->win2);
         if (n->vp)
             vtparser_close(n->vp);
         if (recurse)
@@ -911,8 +914,22 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
         curs_set(focused->vis);
         getyx(focused->win, y, x);
         wmove(focused->win, y, x);
-        redraw(focused);
+        prefresh(focused->win, 0, 0, focused->y, focused->x, focused->y + focused->h, focused->x + focused->w);
     }
+}
+
+static WINDOW *
+setupwin(int h, int w)
+{
+    WINDOW *win = newpad(h, w);
+    if (!win)
+        return NULL;
+
+    nodelay(win, TRUE);
+    scrollok(win, TRUE);
+    keypad(win, TRUE);
+
+    return win;
 }
 
 static NODE *
@@ -928,11 +945,9 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->top = 0;
     n->bot = h;
     n->am = n->ckm = n->srm = true;
-    n->win = newpad(h, w);
-    nodelay(n->win, TRUE);
-    scrollok(n->win, TRUE);
-    keypad(n->win, TRUE);
-    if (!n->win)
+    n->win = n->win1 = setupwin(h, w);
+    n->win2 = setupwin(h, w);
+    if (!n->win1 || !n->win2)
         return freenode(n, false), NULL;
 
     n->vp = vtparser_open(n);
@@ -1059,9 +1074,8 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     n->w = w;
 
     getyx(n->win, oy, ox);
-    mvwin(n->win, 0, 0);
-    wresize(n->win, h? h : 2, w? w : 2);
-    mvwin(n->win, y, x);
+    wresize(n->win1, h? h : 2, w? w : 2);
+    wresize(n->win2, h? h : 2, w? w : 2);
     csr(n->vp, n, L'r', 0, 0, NULL);
     wmove(n->win, oy, ox);
     redraw(n);
