@@ -48,7 +48,7 @@ typedef enum{
 } node_t;
 
 typedef enum{
-    MOUSE_NONE          = 0x0,
+    MOUSE_NONE          = 0x00,
     MOUSE_STANDARD      = 0x01,
     MOUSE_BUTTON_MOTION = 0x02
 } mouse_t;
