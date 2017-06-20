@@ -76,7 +76,7 @@ struct COLORTABLE{
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool cmd, kbs, mouse;
+static bool cmd, mouse;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -87,7 +87,7 @@ static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
 static void reshapechildren(NODE *n);
-static const char *term = "eterm-color";
+static const char *term = "screen";
 static void freenode(NODE *n, bool recursive);
 
 /*** CHARACTER SETS
@@ -269,7 +269,7 @@ HANDLER(bell) /* Terminal bell. */
 ENDHANDLER
 
 HANDLER(vbell) /* Terminal visual bell. */
-    flash();
+    // XXX flash();
 ENDHANDLER
 
 HANDLER(su) /* SU - Scroll Up/Down */
@@ -519,6 +519,7 @@ HANDLER(mode) /* Set or Reset Mode */
         case   12: n->srm = set;                                       break;
         case   20: n->lnm = set;                                       break;
         case   25: n->vis = set;                                       break;
+        case   34: n->vis = set? 2 : 1;                                break;
         case   47: switchbuf(n, P0(i), set);                           break;
         case 1000: n->mmode = set? MOUSE_STANDARD : MOUSE_NONE;        break;
         case 1002: requestposmode(n, set);                             break;
@@ -559,34 +560,36 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         sgr0(v, p, 0, 0, 0, NULL);
 
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: sgr0(v, p, 0, 0, 0, NULL);           break;
-        case  1: wattron(win,  A_BOLD);               break;
-        case  3: wattron(win,  A_ITALIC);             break;
-        case  4: wattron(win,  A_UNDERLINE);          break;
-        case  5: wattron(win,  A_BLINK);              break;
-        case  7: wattron(win,  A_REVERSE);            break;
-        case  8: wattron(win,  A_INVIS);              break;
-        case 23: wattroff(win, A_ITALIC);             break;
-        case 24: wattroff(win, A_UNDERLINE);          break;
-        case 27: wattroff(win, A_REVERSE);            break;
-        case 30: n->fg = COLOR_BLACK;   doc = true;   break;
-        case 31: n->fg = COLOR_RED;     doc = true;   break;
-        case 32: n->fg = COLOR_GREEN;   doc = true;   break;
-        case 33: n->fg = COLOR_YELLOW;  doc = true;   break;
-        case 34: n->fg = COLOR_BLUE;    doc = true;   break;
-        case 35: n->fg = COLOR_MAGENTA; doc = true;   break;
-        case 36: n->fg = COLOR_CYAN;    doc = true;   break;
-        case 37: n->fg = COLOR_WHITE;   doc = true;   break;
-        case 39: n->fg = -1;            doc = true;   break;
-        case 40: n->bg = COLOR_BLACK;   doc = true;   break;
-        case 41: n->bg = COLOR_RED;     doc = true;   break;
-        case 42: n->bg = COLOR_GREEN;   doc = true;   break;
-        case 43: n->bg = COLOR_YELLOW;  doc = true;   break;
-        case 44: n->bg = COLOR_BLUE;    doc = true;   break;
-        case 45: n->bg = COLOR_MAGENTA; doc = true;   break;
-        case 46: n->bg = COLOR_CYAN;    doc = true;   break;
-        case 47: n->bg = COLOR_WHITE;   doc = true;   break;
-        case 49: n->bg = -1;            doc = true;   break;
+        case  0: sgr0(v, p, 0, 0, 0, NULL);                   break;
+        case  1: wattron(win,  A_BOLD);                       break;
+        case  2: wattron(win,  A_DIM);                        break;
+        case  3: wattron(win,  A_STANDOUT);                   break;
+        case  4: wattron(win,  A_UNDERLINE);                  break;
+        case  5: wattron(win,  A_BLINK);                      break;
+        case  7: wattron(win,  A_REVERSE);                    break;
+        case 22: wattroff(win, A_BOLD); wattroff(win, A_DIM); break;
+        case 23: wattroff(win, A_STANDOUT);                   break;
+        case 24: wattroff(win, A_UNDERLINE);                  break;
+        case 25: wattroff(win, A_BLINK);                      break;
+        case 27: wattroff(win, A_REVERSE);                    break;
+        case 30: n->fg = COLOR_BLACK;   doc = true;           break;
+        case 31: n->fg = COLOR_RED;     doc = true;           break;
+        case 32: n->fg = COLOR_GREEN;   doc = true;           break;
+        case 33: n->fg = COLOR_YELLOW;  doc = true;           break;
+        case 34: n->fg = COLOR_BLUE;    doc = true;           break;
+        case 35: n->fg = COLOR_MAGENTA; doc = true;           break;
+        case 36: n->fg = COLOR_CYAN;    doc = true;           break;
+        case 37: n->fg = COLOR_WHITE;   doc = true;           break;
+        case 39: n->fg = -1;            doc = true;           break;
+        case 40: n->bg = COLOR_BLACK;   doc = true;           break;
+        case 41: n->bg = COLOR_RED;     doc = true;           break;
+        case 42: n->bg = COLOR_GREEN;   doc = true;           break;
+        case 43: n->bg = COLOR_YELLOW;  doc = true;           break;
+        case 44: n->bg = COLOR_BLUE;    doc = true;           break;
+        case 45: n->bg = COLOR_MAGENTA; doc = true;           break;
+        case 46: n->bg = COLOR_CYAN;    doc = true;           break;
+        case 47: n->bg = COLOR_WHITE;   doc = true;           break;
+        case 49: n->bg = -1;            doc = true;           break;
     }
 
     if (doc)
@@ -605,16 +608,8 @@ HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
     wmove(win, MIN(n->bot - 1, MAX(n->top, P1(0) - 1)), x);
 ENDHANDLER
 
-HANDLER(vpr) /* VPR - Cursor Vertical Relative */
-    wmove(win, MIN(n->bot - 1, MAX(n->top, y + P1(0))), x);
-ENDHANDLER
-
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
     wmove(win, y, MIN(P1(0) - 1, mx - 1));
-ENDHANDLER
-
-HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
-    wmove(win, y, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
@@ -742,10 +737,8 @@ setupevents(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
@@ -1210,8 +1203,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     while (getmouse(&e) != ERR) handlemouse(e));
-    DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
-    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, kbs? "\177" : "\033[3~"))
+    DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, "\010"))
+    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\033[3~"))
     DO(cmd,   KEY_CODE_YES,     KEY_IC,        SEND(focused, "\033[2~"))
     DO(false, OK,               commandkey,    return cmd = true)
     DO(false, OK,               0,             SENDN(focused, "\000", 1))
@@ -1272,11 +1265,11 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
     int c = 0;
     while ((c = getopt(argc, argv, "mubT:t:c:")) != -1) switch (c){
-        case 'b': kbs = true;                  break;
         case 'c': commandkey = CTL(optarg[0]); break;
         case 'T': setenv("TERM", optarg, 1);   break;
         case 't': term = optarg;               break;
         case 'm': mouse = true;                break;
+        case 'b': /* ignored */                break;
         case 'u': /* ignored */                break;
         default:  quit(EXIT_FAILURE, USAGE);   break;
     }
