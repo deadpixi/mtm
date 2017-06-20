@@ -268,10 +268,6 @@ HANDLER(bell) /* Terminal bell. */
     beep();
 ENDHANDLER
 
-HANDLER(vbell) /* Terminal visual bell. */
-    // XXX flash();
-ENDHANDLER
-
 HANDLER(su) /* SU - Scroll Up/Down */
     int c = (w == L'T' || w == L'^')? -P1(0) : P1(0);
     wscrl(win, c);
@@ -762,7 +758,6 @@ setupevents(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'g', vbell);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'p', cvis);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'=', numkp);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'>', numkp);
