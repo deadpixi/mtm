@@ -58,9 +58,10 @@ struct NODE{
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, msgr, *tabs;
+    bool insert, oxenl, xenl, ckm, am, lnm, srm, msgr, *tabs;
     mouse_t mmode;
-    PRINTER g0, g1, g2, g3, gc, gs, go;
+    wchar_t repc;
+    PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win, *win1, *win2;
     VTPARSER *vp;
@@ -255,6 +256,7 @@ getshell(void) /* Get the user's preferred shell. */
     {                                                                       \
         COMMONVARS
 #define ENDHANDLER                                              \
+        n->repc = 0; /* control sequences cannot be repeated */ \
     }
 
 void
@@ -268,10 +270,6 @@ HANDLER(bell) /* Terminal bell. */
     beep();
 ENDHANDLER
 
-HANDLER(vbell) /* Terminal visual bell. */
-    flash();
-ENDHANDLER
-
 HANDLER(su) /* SU - Scroll Up/Down */
     int c = (w == L'T' || w == L'^')? -P1(0) : P1(0);
     wscrl(win, c);
@@ -279,7 +277,7 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
     n->xenl = false;
-    wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
+    wmove(win, P1(0) - 1, P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
@@ -344,17 +342,7 @@ HANDLER(rc) /* RC - Restore Cursor */
 ENDHANDLER
 
 HANDLER(scs) /* SCS - Select Character Set */
-    PRINTER *t = NULL;
-    switch (iw){
-        case L'(': t = &n->g0; break;
-        case L')': t = &n->g1; break;
-        case L'*': t = &n->g2; break;
-        case L'+': t = &n->g3; break;
-    }
-
-    if (!t)
-        return;
-
+    PRINTER *t = (iw == L'(')? &n->g0 : &n->g1;
     switch (w){
         case L'A': *t = cset_uk;       break;
         case L'B': *t = cset_ascii;    break;
@@ -386,12 +374,7 @@ HANDLER(decaln) /* DECALN - DEC Alignment Test */
 ENDHANDLER
 
 HANDLER(decid) /* DECID - Identify Terminal */
-    if (iw == L'>' && w == L'c')
-        SEND(n, "\033[>84;0;0c");
-    else if (w == L'c')
-        SEND(n, "\033[?1;2c");
-    else
-        SEND(n, "\033[?6c");
+    SEND(n, w == L'c'? "\033[?1;2c" : "\033[?6c");
 ENDHANDLER
 
 HANDLER(rcordecaln) /* RC or DECLN - Restore Cursor or DECALN */
@@ -430,11 +413,15 @@ HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
 ENDHANDLER
 
 HANDLER(dsr) /* DSR - Device Status Report */
-    if (P0(0) == 6){
-        char buf[100] = {0};
-        snprintf(buf, 99, "\033[%d;%dR", (n->decom? y - n->top : y) + 1, x + 1);
+    char buf[100] = {0};
+
+    if (P0(0) == 5)
+        strncpy(buf, "\033[0n", 99);
+    else if (P0(0) == 6)
+        snprintf(buf, 99, "\033[%d;%dR", y + 1, x + 1);
+
+    if (buf[0])
         SEND(n, buf);
-    }
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -514,7 +501,6 @@ HANDLER(mode) /* Set or Reset Mode */
         case    1: n->ckm = set;                                       break;
         case    3: werase(win); wmove(win, 0, 0);                      break;
         case    4: n->insert = set;                                    break;
-        case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL);        break;
         case    7: n->am = set;                                        break;
         case   12: n->srm = set;                                       break;
         case   20: n->lnm = set;                                       break;
@@ -541,8 +527,8 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wmove(win, 0, 0);
     n->vis = 1;
     n->win = n->win1;
-    n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
-    n->gs = n->gc = n->g0 = n->g2 = n->g3 = cset_ascii;
+    n->insert = n->oxenl = n->xenl = n->lnm = false;
+    n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
     n->ckm = n->am = n->srm = true;
     n->top = 0;
@@ -664,12 +650,8 @@ ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
     switch (w){
-        case 0x0f: n->gc = n->g0;                break;
-        case 0x0e: n->gc = n->g1;                break;
-        case L'n': n->gc = n->g2;                break;
-        case L'o': n->gc = n->g3;                break;
-        case L'N': n->go = n->gc; n->gc = n->g2; break;
-        case L'O': n->go = n->gc; n->gc = n->g3; break;
+        case 0x0e: n->gc = n->g1;             break;
+        case 0x0f: n->gc = n->g0;             break;
     }
 ENDHANDLER
 
@@ -690,19 +672,15 @@ HANDLER(print) /* Print a character to the terminal */
     n->gc(n->win, w);
     if (wmove(win, y, x + wcwidth(w)) == ERR)
         n->xenl = true;
-
-    if (n->go){
-        n->gc = n->go;
-        n->go = NULL;
-    }
+    n->repc = w;
 
     redraw(n);
-ENDHANDLER
+} /* we don't use ENDHANDLER here because we don't want to clear repc */
 
-HANDLER(cvis) /* CVIS - cursor visibility */
-    switch (iw){
-        case L'6': n->vis = 0; break;
-        case L'7': n->vis = 1; break;
+HANDLER(rep) /* REP - Repeat Character */
+    if (n->repc){
+        for (int i = 0; i < P1(0); i++)
+            print(v, p, n->repc, 0, 0, NULL);
     }
 ENDHANDLER
 
@@ -743,6 +721,7 @@ setupevents(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
+    vtparser_onevent(n->vp, VTPARSER_CSI,     L'b', rep);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
@@ -753,8 +732,6 @@ setupevents(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L's', sc);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'u', rcordecaln);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'x', decreqtparm);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
@@ -769,8 +746,6 @@ setupevents(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'g', vbell);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'p', cvis);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'=', numkp);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'>', numkp);
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
