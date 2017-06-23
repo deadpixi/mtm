@@ -237,19 +237,6 @@ HANDLER(cub) /* CUB - Cursor Backward */
     wmove(win, y, MAX(x - P1(0), 0));
 ENDHANDLER
 
-HANDLER(decaln) /* DECALN - DEC Alignment Test */
-    chtype s[] = {COLOR_PAIR(0) | 'E', 0};
-    for (int r = 0; r < my; r++){
-        for (int c = 0; c <= mx; c++)
-            mvwaddchnstr(win, r, c, s, 1);
-    }
-    wmove(win, y, x);
-ENDHANDLER
-
-HANDLER(rcordecaln) /* RC or DECLN - Restore Cursor or DECALN */
-    ((iw == L'#')? decaln : rc)(v, p, w, iw, argc, argv);
-ENDHANDLER
-
 HANDLER(el) /* EL - Erase in Line */
     chtype s[] = {COLOR_PAIR(0) | ' ', 0};
     switch (P0(0)){
@@ -445,7 +432,7 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
+    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rc);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
