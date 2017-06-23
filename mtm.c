@@ -38,7 +38,6 @@
 
 /*** DATA TYPES */
 typedef struct NODE NODE;
-typedef void (*PRINTER)(WINDOW *win, wchar_t w);
 
 typedef enum{
     HORIZONTAL,
@@ -52,7 +51,6 @@ struct NODE{
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl;
-    PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win;
     VTPARSER *vp;
@@ -79,77 +77,6 @@ static void draw(NODE *n);
 static void reshapechildren(NODE *n);
 static const char *term = "eterm-color";
 static void freenode(NODE *n, bool recursive);
-
-/*** CHARACTER SETS
- * Each of the functions below takes a wide character and a window, and prints
- * that character to that window, optionally translating it first. We do this
- * by creating different PRINTER functions for each character set.
- *
- * We can't use static lookup tables because some of the special characters,
- * like the line-drawing ones, do not have constant representations.
- */
-
-/* ASCII Character Set...really just "don't do any translation." */
-static void
-cset_ascii(WINDOW *win, wchar_t w)
-{
-    cchar_t r;
-    attr_t a = A_NORMAL;
-    short p = 0;
-    wchar_t s[] = {w, 0};
-
-    wattr_get(win, &a, &p, NULL);
-    setcchar(&r, s, a, p, NULL);
-    wadd_wchnstr(win, &r, 1);
-}
-
-/* UK Character Set */
-static void
-cset_uk(WINDOW *win, wchar_t w)
-{
-    w == L'#'? (void)wadd_wchnstr(win, WACS_STERLING, 1) : cset_ascii(win, w);
-}
-
-/* Graphics Character Sets */
-static void
-cset_graphics(WINDOW *win, wchar_t w)
-{
-    switch (w){
-        case L'}': wadd_wchnstr(win, WACS_STERLING, 1); return;
-        case L'.': wadd_wchnstr(win, WACS_DARROW, 1);   return;
-        case L',': wadd_wchnstr(win, WACS_LARROW, 1);   return;
-        case L'+': wadd_wchnstr(win, WACS_RARROW, 1);   return;
-        case L'-': wadd_wchnstr(win, WACS_UARROW, 1);   return;
-        case L'h': wadd_wchnstr(win, WACS_BOARD, 1);    return;
-        case L'~': wadd_wchnstr(win, WACS_BULLET, 1);   return;
-        case L'a': wadd_wchnstr(win, WACS_CKBOARD, 1);  return;
-        case L'f': wadd_wchnstr(win, WACS_DEGREE, 1);   return;
-        case L'`': wadd_wchnstr(win, WACS_DIAMOND, 1);  return;
-        case L'z': wadd_wchnstr(win, WACS_GEQUAL, 1);   return;
-        case L'{': wadd_wchnstr(win, WACS_PI, 1);       return;
-        case L'q': wadd_wchnstr(win, WACS_HLINE, 1);    return;
-        case L'i': wadd_wchnstr(win, WACS_LANTERN, 1);  return;
-        case L'n': wadd_wchnstr(win, WACS_PLUS, 1);     return;
-        case L'y': wadd_wchnstr(win, WACS_LEQUAL, 1);   return;
-        case L'm': wadd_wchnstr(win, WACS_LLCORNER, 1); return;
-        case L'j': wadd_wchnstr(win, WACS_LRCORNER, 1); return;
-        case L'|': wadd_wchnstr(win, WACS_NEQUAL, 1);   return;
-        case L'g': wadd_wchnstr(win, WACS_PLMINUS, 1);  return;
-        case L'o': wadd_wchnstr(win, WACS_S1, 1);       return;
-        case L'p': wadd_wchnstr(win, WACS_S3, 1);       return;
-        case L'r': wadd_wchnstr(win, WACS_S7, 1);       return;
-        case L's': wadd_wchnstr(win, WACS_S9, 1);       return;
-        case L'0': wadd_wchnstr(win, WACS_BLOCK, 1);    return;
-        case L'w': wadd_wchnstr(win, WACS_TTEE, 1);     return;
-        case L'u': wadd_wchnstr(win, WACS_RTEE, 1);     return;
-        case L't': wadd_wchnstr(win, WACS_LTEE, 1);     return;
-        case L'v': wadd_wchnstr(win, WACS_BTEE, 1);     return;
-        case L'l': wadd_wchnstr(win, WACS_ULCORNER, 1); return;
-        case L'k': wadd_wchnstr(win, WACS_URCORNER, 1); return;
-        case L'x': wadd_wchnstr(win, WACS_VLINE, 1);    return;
-        default:   cset_ascii(win, w);                  return;
-    };
-}
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -290,7 +217,6 @@ HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
 ENDHANDLER
 
 HANDLER(sc) /* SC - Save Cursor */
-    n->gs = n->gc;                           /* save current character set */
     n->sx = x;                               /* save X position            */
     n->sy = y;                               /* save Y position            */
     wattr_get(win, &n->sattr, &n->sp, NULL); /* save attrs and color pair  */
@@ -300,23 +226,11 @@ HANDLER(sc) /* SC - Save Cursor */
 ENDHANDLER
 
 HANDLER(rc) /* RC - Restore Cursor */
-    n->gc = n->gs;                           /* get current character set */
     wmove(win, n->sy, n->sx);                /* get old position          */
     wattr_set(win, n->sattr, n->sp, NULL);   /* get attrs and color pair  */
     n->fg = n->sfg;                          /* get foreground color      */
     n->bg = n->sbg;                          /* get background color      */
     n->xenl = n->oxenl;                      /* get xenl state            */
-ENDHANDLER
-
-HANDLER(scs) /* SCS - Select Character Set */
-    PRINTER *t = (iw == L'(')? &n->g0 : &n->g1;
-    switch (w){
-        case L'A': *t = cset_uk;       break;
-        case L'B': *t = cset_ascii;    break;
-        case L'0': *t = cset_graphics; break;
-        case L'1': *t = cset_ascii;    break;
-        case L'2': *t = cset_graphics; break;
-    }
 ENDHANDLER
 
 HANDLER(cub) /* CUB - Cursor Backward */
@@ -331,10 +245,6 @@ HANDLER(decaln) /* DECALN - DEC Alignment Test */
             mvwaddchnstr(win, r, c, s, 1);
     }
     wmove(win, y, x);
-ENDHANDLER
-
-HANDLER(decid) /* DECID - Identify Terminal */
-    SEND(n, w == L'c'? "\033[?1;2c" : "\033[?6c");
 ENDHANDLER
 
 HANDLER(rcordecaln) /* RC or DECLN - Restore Cursor or DECALN */
@@ -413,8 +323,6 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = false;
-    n->gs = n->gc = n->g0 = cset_ascii;
-    n->g1 = cset_graphics;
     n->top = 0;
     n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
@@ -470,20 +378,8 @@ HANDLER(ind) /* IND - Index */
     y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
 ENDHANDLER
 
-HANDLER(nel) /* NEL - Next Line */
-    cr(v, p, w, 0, 0, NULL);
-    ind(v, p, w, 0, 0, NULL);
-ENDHANDLER
-
 HANDLER(pnl) /* NL - Newline */
     ind(v, p, w, 0, 0, NULL);
-ENDHANDLER
-
-HANDLER(so) /* SO/SI - Switch Out/In character set */
-    switch (w){
-        case 0x0e: n->gc = n->g1;             break;
-        case 0x0f: n->gc = n->g0;             break;
-    }
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
@@ -498,7 +394,15 @@ HANDLER(print) /* Print a character to the terminal */
         getyx(win, y, x);
     }
 
-    n->gc(n->win, w);
+    cchar_t r;
+    attr_t a = A_NORMAL;
+    short cp = 0;
+    wchar_t s[] = {w, 0};
+
+    wattr_get(win, &a, &cp, NULL);
+    setcchar(&r, s, a, cp, NULL);
+    wadd_wchnstr(win, &r, 1);
+
     if (wmove(win, y, x + wcwidth(w)) == ERR)
         n->xenl = true;
 
@@ -523,8 +427,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0e, so);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0f, so);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuu);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
@@ -545,12 +447,8 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'B', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'E', nel);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
 }
@@ -566,8 +464,6 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
     if (!n || h < 2 || w < 2)
         return free(n), NULL;
 
-    n->gs = n->gc = n->g0 = cset_ascii;
-    n->g1 = cset_graphics;
     n->t = t;
     n->pt = -1;
     n->p = p;
