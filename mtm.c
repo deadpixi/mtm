@@ -66,7 +66,6 @@ struct COLORTABLE{
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool cmd;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -746,6 +745,8 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 static bool
 handlechar(int r, int k) /* Handle a single input character. */
 {
+    static bool cmd = false;
+
     #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
