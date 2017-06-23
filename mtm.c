@@ -281,13 +281,6 @@ getshell(void) /* Get the user's preferred shell. */
         n->repc = 0; /* control sequences cannot be repeated */ \
     }
 
-void
-redraw(NODE *n)
-{
-    if (n && n->win)
-        pnoutrefresh(n->win, 0, 0, n->y, n->x, n->y + n->h, n->x + n->w);
-}
-
 HANDLER(bell) /* Terminal bell. */
     beep();
 ENDHANDLER
@@ -713,7 +706,7 @@ HANDLER(print) /* Print a character to the terminal */
         n->xenl = true;
     n->repc = w;
 
-    redraw(n);
+    wnoutrefresh(win);
 } /* we don't use ENDHANDLER here because we don't want to clear repc */
 
 HANDLER(print52) /* Print a character, but handle movement too. */
@@ -911,7 +904,7 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
         curs_set(focused->vis);
         getyx(focused->win, y, x);
         wmove(focused->win, y, x);
-        redraw(focused);
+        wrefresh(focused->win);
     }
 }
 
@@ -928,7 +921,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->top = 0;
     n->bot = h;
     n->am = n->ckm = n->srm = true;
-    n->win = newpad(h, w);
+    n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
     keypad(n->win, TRUE);
@@ -980,7 +973,7 @@ focus(NODE *n) /* Focus a node. */
         return;
     else if (n->t == VIEW){
         focused = n;
-        redraw(n);
+        wnoutrefresh(n->win);
     } else
         focus(n->c1? n->c1 : n->c2);
 }
@@ -1053,18 +1046,13 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
         n->tabs = tabs;
     }
 
-    n->y = y;
-    n->x = x;
-    n->h = h;
-    n->w = w;
-
     getyx(n->win, oy, ox);
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
     csr(n->vp, n, L'r', 0, 0, NULL);
     wmove(n->win, oy, ox);
-    redraw(n);
+    wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
 }
 
@@ -1095,7 +1083,7 @@ reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
     else
         reshapechildren(n);
     draw(n);
-    redraw(n);
+    wnoutrefresh(n->win);
 }
 
 static void
@@ -1114,7 +1102,7 @@ static void
 draw(NODE *n) /* Draw a node. */
 {
     if (n->t == VIEW)
-        redraw(n);
+        wnoutrefresh(n->win);
     else
         drawchildren(n);
 }
