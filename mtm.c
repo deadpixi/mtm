@@ -522,6 +522,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
+    idlok(n->win, TRUE);
     keypad(n->win, TRUE);
     if (!n->win)
         return freenode(n, false), NULL;
