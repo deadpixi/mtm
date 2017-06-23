@@ -66,7 +66,7 @@ struct COLORTABLE{
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool cmd, kbs;
+static bool cmd;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -808,7 +808,6 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
     int c = 0;
     while ((c = getopt(argc, argv, "mubT:t:c:")) != -1) switch (c){
-        case 'b': kbs = true;                  break;
         case 'c': commandkey = CTL(optarg[0]); break;
         case 'T': setenv("TERM", optarg, 1);   break;
         case 't': term = optarg;               break;
