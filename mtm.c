@@ -58,7 +58,7 @@ struct NODE{
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, msgr, *tabs;
+    bool insert, oxenl, xenl, decom, msgr, *tabs;
     mouse_t mmode;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
@@ -279,7 +279,7 @@ ENDHANDLER
 
 HANDLER(cup) /* CUP - Cursor Position */
     n->xenl = false;
-    wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
+    wmove(win, P1(0) - 1, P1(1) - 1);
 ENDHANDLER
 
 HANDLER(dch) /* DCH - Delete Character */
@@ -427,7 +427,7 @@ HANDLER(dsr) /* DSR - Device Status Report */
     if (P0(0) == 5)
         strncpy(buf, "\033[0n", 99);
     else if (P0(0) == 6)
-        snprintf(buf, 99, "\033[%d;%dR", (n->decom? y - n->top : y) + 1, x + 1);
+        snprintf(buf, 99, "\033[%d;%dR", y + 1, x + 1);
 
     if (buf[0])
         SEND(n, buf);
@@ -451,10 +451,6 @@ HANDLER(csr) /* CSR - Change Scrolling Region */
     }
 ENDHANDLER
 
-HANDLER(numkp) /* Application/Numeric Keypad Mode */
-    n->ckm = (w == L'=');
-ENDHANDLER
-
 static void
 requestposmode(NODE *n, bool set)
 {
@@ -476,17 +472,8 @@ requestposmode(NODE *n, bool set)
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case    1: n->ckm = set;                                       break;
-        case    3: werase(win); wmove(win, 0, 0);                      break;
-        case    4: n->insert = set;                                    break;
-        case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL);        break;
-        case    7: n->am = set;                                        break;
-        case   12: n->srm = set;                                       break;
-        case   20: n->lnm = set;                                       break;
-        case   25: n->vis = set;                                       break;
-        case 1000: n->mmode = set? MOUSE_STANDARD : MOUSE_NONE;        break;
-        case 1002: requestposmode(n, set);                             break;
-        case 1006: n->msgr = set;                                      break;
+        case  4: n->insert = set; break;
+        case 25: n->vis = set;    break;
     }
 ENDHANDLER
 
@@ -500,10 +487,9 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     sgr0(v, p, 0, 0, 0, NULL);
     wclear(win);
     wmove(win, 0, 0);
-    n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
+    n->insert = n->oxenl = n->xenl = false;
     n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
-    n->ckm = n->am = n->srm = true;
     n->top = 0;
     n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
@@ -615,10 +601,7 @@ HANDLER(nel) /* NEL - Next Line */
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
-    if (n->lnm)
-        nel(v, p, w, 0, 0, NULL);
-    else
-        ind(v, p, w, 0, 0, NULL);
+    ind(v, p, w, 0, 0, NULL);
 ENDHANDLER
 
 HANDLER(so) /* SO/SI - Switch Out/In character set */
@@ -637,8 +620,6 @@ HANDLER(print) /* Print a character to the terminal */
 
     if (n->xenl){
         n->xenl = false;
-        if (n->am)
-            nel(v, p, L'\n', 0, 0, NULL);
         getyx(win, y, x);
     }
 
@@ -731,8 +712,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'=', numkp);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'>', numkp);
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
 }
 
@@ -823,7 +802,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->vis = 1;
     n->top = 0;
     n->bot = h;
-    n->am = n->ckm = n->srm = true;
     n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
@@ -1152,8 +1130,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(false, OK,               commandkey,    return cmd = true)
     DO(false, OK,               0,             SENDN(focused, "\000", 1))
     DO(false, OK,               '\n',          SEND(focused, "\n"))
-    DO(false, OK,               '\r',          SEND(focused, focused->lnm? "\r\n" : "\r"))
-    DO(false, KEY_CODE_YES,     KEY_ENTER,     SEND(focused, focused->lnm? "\r\n" : "\r"))
+    DO(false, OK,               '\r',          SEND(focused, "\r"))
+    DO(false, KEY_CODE_YES,     KEY_ENTER,     SEND(focused, "\r"))
     DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, "\033OA"))
     DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, "\033OB"))
     DO(false, KEY_CODE_YES,     KEY_RIGHT,     SEND(focused, "\033OC"))
@@ -1172,11 +1150,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  REDRAW_KIND,      REDRAW,        draw(root))
 
     char c[MB_LEN_MAX + 1] = {0};
-    if (wctomb(c, k) > 0){
+    if (wctomb(c, k) > 0)
         SEND(focused, c);
-        if (!focused->srm)
-            print(focused->vp, focused, k, 0, 0, NULL);
-    }
 
     return cmd = false, true;
 }
