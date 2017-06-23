@@ -545,17 +545,6 @@ HANDLER(print) /* Print a character to the terminal */
     wnoutrefresh(win);
 ENDHANDLER
 
-HANDLER(decsca) /* DECSCA - Define protected area */
-    if (iw != L'"')
-        return;
-
-    switch (P0(0)){
-        case 0: wattron(win, A_PROTECT);  break;
-        case 1: wattroff(win, A_PROTECT); break;
-        case 2: wattron(win, A_PROTECT);  break;
-    }
-ENDHANDLER
-
 HANDLER(tab) /* HT - Horizontal tab */
     while (++x % 8 && x < mx) ;
     wmove(win, y, x);
@@ -604,7 +593,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'q', decsca);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'x', decreqtparm);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
