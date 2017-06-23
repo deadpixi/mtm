@@ -51,7 +51,7 @@ struct NODE{
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, *tabs;
+    bool insert, oxenl, xenl;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
@@ -296,11 +296,6 @@ HANDLER(ack) /* ACK - Acknowledge Enquiry */
     SEND(n, "\006");
 ENDHANDLER
 
-HANDLER(hts) /* HTS - Horizontal Tab Set */
-    if (x < n->w && x > 0)
-        n->tabs[x] = true;
-ENDHANDLER
-
 HANDLER(ri) /* RI - Reverse Index */
     y == n->top? wscrl(win, -1) : wmove(win, y - 1, x);
 ENDHANDLER
@@ -332,13 +327,6 @@ HANDLER(scs) /* SCS - Select Character Set */
         case L'0': *t = cset_graphics; break;
         case L'1': *t = cset_ascii;    break;
         case L'2': *t = cset_graphics; break;
-    }
-ENDHANDLER
-
-HANDLER(tbc) /* TBC - Tabulation Clear */
-    switch (P0(0)){
-        case 0: n->tabs[x] = false;                            break;
-        case 3: memset(n->tabs, 0, sizeof(bool) * (n->w - 1)); break;
     }
 ENDHANDLER
 
@@ -449,8 +437,6 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     n->top = 0;
     n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
-    for (int i = 0; i < mx; i++)
-        n->tabs[i] = (i % 8 == 0);
 ENDHANDLER
 
 HANDLER(sgr) /* SGR - Select Graphic Rendition */
@@ -518,30 +504,6 @@ HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
     wmove(win, y, MIN(x + P1(0), mx - 1));
 ENDHANDLER
 
-HANDLER(cbt) /* CBT - Cursor Backwards Tab */
-    for (int i = x - 1; i >= 0; i--) if (n->tabs[i]){
-        wmove(win, y, i);
-        return;
-    }
-    wmove(win, y, 0);
-ENDHANDLER
-
-HANDLER(ht) /* HT - Horizontal Tab */
-    for (int i = x + 1; i < n->w; i++) if (n->tabs[i]){
-        wmove(win, y, i);
-        return;
-    }
-    wmove(win, y, mx - 1);
-ENDHANDLER
-
-HANDLER(tab) /* Tab backwards or forwards. */
-    for (int i = 0; i < P1(0); i++) switch (w){
-        case L'I':  ht(v, p, w, 0, 0, NULL);  break;
-        case L'\t': ht(v, p, w, 0, 0, NULL);  break;
-        case L'Z':  cbt(v, p, w, 0, 0, NULL); break;
-    }
-ENDHANDLER
-
 HANDLER(cr) /* CR - Carriage Return */
     n->xenl = false;
     wmove(win, y, 0);
@@ -605,6 +567,11 @@ HANDLER(decsca) /* DECSCA - Define protected area */
     }
 ENDHANDLER
 
+HANDLER(tab) /* HT - Horizontal tab */
+    while (++x % 8 && x < mx) ;
+    wmove(win, y, x);
+ENDHANDLER
+
 static void
 setupevents(NODE *n)
 {
@@ -628,7 +595,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'F', cpl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'G', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'I', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'K', el);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
@@ -637,7 +603,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'S', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'T', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'X', ech);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'Z', tab);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
@@ -647,7 +612,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'g', tbc);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
@@ -664,7 +628,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'B', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'E', nel);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'H', hts);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', decid);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
@@ -675,26 +638,12 @@ setupevents(NODE *n)
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
  */
-static bool *
-newtabs(int w, int ow, bool *oldtabs) /* Initialize default tabstops. */
-{
-    bool *tabs = calloc(w, sizeof(bool));
-    if (!tabs)
-        return NULL;
-
-    for (int i = 0; i < w; i++)
-        tabs[i] = i < ow? oldtabs[i] : (i % 8 == 0);
-
-    return tabs;
-}
-
 static NODE *
 newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
 {
     NODE *n = calloc(1, sizeof(NODE));
-    bool *tabs = newtabs(w, 0, NULL);
-    if (!n || !tabs || h < 2 || w < 2)
-        return free(n), free(tabs), NULL;
+    if (!n || h < 2 || w < 2)
+        return free(n), NULL;
 
     n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
@@ -705,7 +654,6 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
     n->x = x;
     n->h = h;
     n->w = w;
-    n->tabs = tabs;
 
     return n;
 }
@@ -726,7 +674,6 @@ freenode(NODE *n, bool recurse) /* Free a node. */
             close(n->pt);
             FD_CLR(n->pt, &fds);
         }
-        free(n->tabs);
         free(n);
     }
 }
@@ -874,12 +821,6 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
 {
     int oy, ox;
     struct winsize ws = {.ws_row = h, .ws_col = w};
-    bool *tabs = newtabs(w, n->w, n->tabs);
-
-    if (tabs){
-        free(n->tabs);
-        n->tabs = tabs;
-    }
 
     getyx(n->win, oy, ox);
     mvwin(n->win, 0, 0);
