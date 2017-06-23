@@ -51,7 +51,7 @@ struct NODE{
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, msgr, *tabs;
+    bool insert, oxenl, xenl, *tabs;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
