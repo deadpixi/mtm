@@ -47,19 +47,12 @@ typedef enum{
     VIEW
 } node_t;
 
-typedef enum{
-    MOUSE_NONE          = 0x00,
-    MOUSE_STANDARD      = 0x01,
-    MOUSE_BUTTON_MOTION = 0x02
-} mouse_t;
-
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl, decom, msgr, *tabs;
-    mouse_t mmode;
     wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
@@ -77,12 +70,10 @@ struct COLORTABLE{
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
-static bool cmd, kbs, mouse;
+static bool cmd, kbs;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
-static int cbutton; /* currently held-down mouse button */
-static int mreqs; /* number of views requesting mouse position */
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -451,24 +442,6 @@ HANDLER(csr) /* CSR - Change Scrolling Region */
     }
 ENDHANDLER
 
-static void
-requestposmode(NODE *n, bool set)
-{
-    if (set && n->mmode != MOUSE_BUTTON_MOTION){
-        n->mmode = MOUSE_BUTTON_MOTION;
-        mreqs++;
-    } else if (!set && n->mmode == MOUSE_BUTTON_MOTION){
-        n->mmode = MOUSE_NONE;
-        mreqs--;
-    }
-
-    mreqs = mreqs < 0? 0 : mreqs;
-    if (mreqs)
-        mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-    else
-        mousemask(ALL_MOUSE_EVENTS, NULL);
-}
-
 HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
@@ -758,8 +731,6 @@ static void
 freenode(NODE *n, bool recurse) /* Free a node. */
 {
     if (n){
-        if (n->t == VIEW)
-            requestposmode(n, false);
         if (n->win)
             delwin(n->win);
         if (n->vp)
@@ -1031,99 +1002,12 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
     return true;
 }
 
-static void
-click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
-{
-    static char buf[100];
-    memset(buf, 0, sizeof(buf));
-
-    if (!n->mmode || !cbutton)
-        return;
-
-    if (b == MOTION_NOTIFY){
-        if (n->mmode != MOUSE_BUTTON_MOTION)
-            return;
-        b = cbutton + MOTION_NOTIFY;
-    }
-
-    wmouse_trafo(n->win, &y, &x, false);
-    b--;
-    x++;
-    y++;
-
-    if (n->msgr)
-        snprintf(buf, 99, "\033[<%d;%d;%d%c", b, x, y, p? 'M' : 'm');
-    else{
-        b  = p? (b + ' ') : (3 + ' ');
-        x += ' ';
-        y += ' ';
-        snprintf(buf, 99, "\033[M%c%c%c", (char)b, (char)x, (char)y);
-    }
-
-    SEND(n, buf);
-}
-
-static void
-handlemouse(MEVENT e) /* handle a mouse event */
-{
-    /* Mouse events to the non-focused view are ignored, except for clicks,
-     * which just set focus.
-     */
-    if (!wenclose(focused->win, e.y, e.x)){
-        if (e.bstate & BUTTON1_CLICKED)
-            focus(findnode(root, e.y, e.x));
-        return;
-    }
-
-    /* Send mouse events by abusing C's fall-through. */
-    int c = 1;
-    int b = 0;
-    bool p = false;
-    switch (e.bstate){
-        case BUTTON1_PRESSED:       b = b? b : 1; p = true; cbutton = b;
-        case BUTTON2_PRESSED:       b = b? b : 2; p = true; cbutton = b;
-        case BUTTON3_PRESSED:       b = b? b : 3; p = true; cbutton = b;
-        case REPORT_MOUSE_POSITION: b = b? b : MOTION_NOTIFY; p = true;
-        case BUTTON1_RELEASED:      b = b? b : 1;
-        case BUTTON2_RELEASED:      b = b? b : 2;
-        case BUTTON3_RELEASED:      b = b? b : 3;
-            click(focused, b, p, e.y, e.x);
-            if (!p)
-                cbutton = 0;
-            break;
-
-        case BUTTON1_TRIPLE_CLICKED: b = b? b : 1;
-        case BUTTON2_TRIPLE_CLICKED: b = b? b : 2;
-        case BUTTON3_TRIPLE_CLICKED: b = b? b : 3;
-            c++;
-
-        case BUTTON1_DOUBLE_CLICKED: b = b? b : 1;
-        case BUTTON2_DOUBLE_CLICKED: b = b? b : 2;
-        case BUTTON3_DOUBLE_CLICKED: b = b? b : 3;
-            c++;
-
-        case BUTTON1_CLICKED: b = b? b : 1;
-        case BUTTON2_CLICKED: b = b? b : 2;
-        case BUTTON3_CLICKED: b = b? b : 3;
-            cbutton = b;
-            for (int i = 0; i < c; i++){
-                click(focused, b, true, e.y, e.x);
-                click(focused, b, false, e.y, e.x);
-            }
-            cbutton = 0;
-            break;
-    }
-}
-
 static bool
 handlechar(int r, int k) /* Handle a single input character. */
 {
-    MEVENT e = {0};
-
     #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
-    DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     while (getmouse(&e) != ERR) handlemouse(e));
     DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, "\177"))
     DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\033[3~"))
     DO(cmd,   KEY_CODE_YES,     KEY_IC,        SEND(focused, "\033[2~"))
@@ -1187,7 +1071,6 @@ main(int argc, char **argv)
         case 'c': commandkey = CTL(optarg[0]); break;
         case 'T': setenv("TERM", optarg, 1);   break;
         case 't': term = optarg;               break;
-        case 'm': mouse = true;                break;
         case 'u': /* ignored */                break;
         default:  quit(EXIT_FAILURE, USAGE);   break;
     }
@@ -1199,8 +1082,6 @@ main(int argc, char **argv)
     intrflush(stdscr, FALSE);
     start_color();
     use_default_colors();
-    if (mouse)
-        mousemask(ALL_MOUSE_EVENTS, NULL);
 
     focus(root = newview(NULL, 0, 0, LINES, COLS));
     draw(root);
