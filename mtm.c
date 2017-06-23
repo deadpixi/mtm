@@ -56,12 +56,12 @@ typedef enum{
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
-    int y, x, sy, sx, h, w, pt, vis, bot, top, dca, dcy;
+    int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
-    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, msgr, vt52, *tabs;
+    bool insert, oxenl, xenl, decom, ckm, am, lnm, srm, msgr, *tabs;
     mouse_t mmode;
     wchar_t repc;
-    PRINTER g0, g1, gc, gs, gs100;
+    PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win;
     VTPARSER *vp;
@@ -84,8 +84,7 @@ static char iobuf[BUFSIZ + 1];
 static int cbutton; /* currently held-down mouse button */
 static int mreqs; /* number of views requesting mouse position */
 
-static void setupvt100events(NODE *n);
-static void setupvt52events(NODE *n);
+static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
 static void draw(NODE *n);
 static void reshapechildren(NODE *n);
@@ -160,27 +159,6 @@ cset_graphics(WINDOW *win, wchar_t w)
         case L'k': wadd_wchnstr(win, WACS_URCORNER, 1); return;
         case L'x': wadd_wchnstr(win, WACS_VLINE, 1);    return;
         default:   cset_ascii(win, w);                  return;
-    };
-}
-
-static void
-cset_vt52graphics(WINDOW *win, wchar_t w)
-{
-    switch (w){
-        case L'a': wadd_wchnstr(win, WACS_BLOCK, 1);    return;
-        case L'f': wadd_wchnstr(win, WACS_DEGREE, 1);   return;
-        case L'g': wadd_wchnstr(win, WACS_PLMINUS, 1);  return;
-        case L'h': wadd_wchnstr(win, WACS_RARROW, 1);   return;
-        case L'k': wadd_wchnstr(win, WACS_DARROW, 1);   return;
-        case L'l': wadd_wchnstr(win, WACS_S1, 1);       return;
-        case L'm': wadd_wchnstr(win, WACS_S1, 1);       return;
-        case L'n': wadd_wchnstr(win, WACS_S3, 1);       return;
-        case L'o': wadd_wchnstr(win, WACS_S3, 1);       return;
-        case L'p': wadd_wchnstr(win, WACS_S7, 1);       return;
-        case L'q': wadd_wchnstr(win, WACS_S7, 1);       return;
-        case L'r': wadd_wchnstr(win, WACS_S9, 1);       return;
-        case L's': wadd_wchnstr(win, WACS_S9, 1);       return;
-        default:   cset_graphics(win, w);               return;
     };
 }
 
@@ -299,11 +277,6 @@ HANDLER(sl) /* SL/SR - Scroll Left or Right */
     wmove(win, y, x);
 ENDHANDLER
 
-HANDLER(dca) /* DCA - Direct Cursor Address */
-    n->xenl = false;
-    n->dca = 1;
-ENDHANDLER
-
 HANDLER(cup) /* CUP - Cursor Position */
     n->xenl = false;
     wmove(win, (n->decom? n->top : 0) + P1(0) - 1, P1(1) - 1);
@@ -409,10 +382,6 @@ HANDLER(decaln) /* DECALN - DEC Alignment Test */
     wmove(win, y, x);
 ENDHANDLER
 
-HANDLER(way) /* WAY - Who Are You? */
-    SEND(n, "\033/Z");
-ENDHANDLER
-
 HANDLER(decid) /* DECID - Identify Terminal */
     SEND(n, w == L'c'? "\033[?1;2c" : "\033[?6c");
 ENDHANDLER
@@ -486,31 +455,6 @@ HANDLER(numkp) /* Application/Numeric Keypad Mode */
     n->ckm = (w == L'=');
 ENDHANDLER
 
-/* The go100 and go52 functions (named, by the way, for the C=128's "GO64")
- * reset the parser and wire up new events for it to parse. Originally, mtm
- * just had two parsers, one for VT100 sequences and one for VT52. However,
- * that ran into a problem: we want to write more than one byte at a time to
- * the parser, but what if we want to switch parsers on byte 48 of a 1000
- * byte block? This solution works nicely, since we can simply rewrire the
- * parsers in callbacks, invoked from the parser.
- */
-HANDLER(go100) /* Switch to VT100 mode. */
-    if (n->vt52){
-        setupvt100events(n);
-        n->dca = -1;
-        n->gc = n->gs100;
-        n->vt52 = false;
-    }
-ENDHANDLER
-
-HANDLER(go52) /* Switch to VT52 mode */
-    if (!n->vt52){
-        setupvt52events(n);
-        n->gs100 = n->gc;
-        n->vt52 = true;
-    }
-ENDHANDLER
-
 static void
 requestposmode(NODE *n, bool set)
 {
@@ -533,7 +477,6 @@ HANDLER(mode) /* Set or Reset Mode */
     bool set = (w == L'h');
     for (int i = 0; i < argc; i++) switch (P0(i)){
         case    1: n->ckm = set;                                       break;
-        case    2: set? (void)0 : go52(v, p, w, iw, argc, argv);       break;
         case    3: werase(win); wmove(win, 0, 0);                      break;
         case    4: n->insert = set;                                    break;
         case    6: n->decom = set; cup(v, p, L'H', 0, 0, NULL);        break;
@@ -558,7 +501,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = n->decom = n->lnm = false;
-    n->gs100 = n->gs = n->gc = n->g0 = cset_ascii;
+    n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
     n->ckm = n->am = n->srm = true;
     n->top = 0;
@@ -682,8 +625,6 @@ HANDLER(so) /* SO/SI - Switch Out/In character set */
     switch (w){
         case 0x0e: n->gc = n->g1;             break;
         case 0x0f: n->gc = n->g0;             break;
-        case L'F': n->gc = cset_vt52graphics; break;
-        case L'G': n->gc = n->g0;             break;
     }
 ENDHANDLER
 
@@ -709,14 +650,6 @@ HANDLER(print) /* Print a character to the terminal */
     wnoutrefresh(win);
 } /* we don't use ENDHANDLER here because we don't want to clear repc */
 
-HANDLER(print52) /* Print a character, but handle movement too. */
-    switch (n->dca){ /* Handle VT52 movement. */
-        case 1: n->dcy = (n->decom? n->top : 0) + (w - 040); n->dca--; return;
-        case 0: n->dca--; wmove(win, n->dcy, w - 040);                 return;
-    }
-    print(v, p, w, iw, argc, argv);
-ENDHANDLER
-
 HANDLER(rep) /* REP - Repeat Character */
     if (n->repc){
         for (int i = 0; i < P1(0); i++)
@@ -736,7 +669,7 @@ HANDLER(decsca) /* DECSCA - Define protected area */
 ENDHANDLER
 
 static void
-setupvt100events(NODE *n) /* Wire up VT100 sequences. */
+setupevents(NODE *n)
 {
     vtparser_reset(n->vp, n);
 
@@ -803,37 +736,6 @@ setupvt100events(NODE *n) /* Wire up VT100 sequences. */
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
 }
 
-static void
-setupvt52events(NODE *n) /* Wire up VT52 events. */
-{
-    vtparser_reset(n->vp, n);
-
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x05, ack);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, tab);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0e, so);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0f, so);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', cuuorsr);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'B', cud);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'C', cuf);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', cub);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'F', so);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'G', so);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'H', cup);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'I', ri);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'J', ed);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'K', el);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Y', dca);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'Z', way);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'<', go100);
-    vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print52);
-}
-
 /*** MTM FUNCTIONS
  * These functions do the user-visible work of MTM: creating nodes in the
  * tree, updating the display, and so on.
@@ -859,7 +761,7 @@ newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
     if (!n || !tabs || h < 2 || w < 2)
         return free(n), free(tabs), NULL;
 
-    n->gs100 = n->gs = n->gc = n->g0 = cset_ascii;
+    n->gs = n->gc = n->g0 = cset_ascii;
     n->g1 = cset_graphics;
     n->t = t;
     n->pt = -1;
@@ -916,7 +818,8 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (!n)
         return NULL;
 
-    n->fg = n->bg = n->dca = -1;
+    /* XXX - use ris here */
+    n->fg = n->bg = -1;
     n->vis = 1;
     n->top = 0;
     n->bot = h;
@@ -931,7 +834,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     n->vp = vtparser_open(n);
     if (!n->vp)
         return freenode(n, false), NULL;
-    setupvt100events(n);
+    setupevents(n);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
@@ -1151,16 +1054,6 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 }
 
 static void
-sendarrow(const NODE *n, const char *k)
-{
-    const char *i = (n->vt52)? "" : (n->ckm? "O" : "[");
-    char buf[100] = {0};
-
-    snprintf(buf, 99, "\033%s%s", i, k);
-    SEND(n, buf);
-}
-
-static void
 click(NODE *n, int b, bool p, int y, int x) /* send a mouse event to the app */
 {
     static char buf[100];
@@ -1253,18 +1146,18 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   KEY_CODE_YES,     KEY_MOUSE,     while (getmouse(&e) != ERR) handlemouse(e));
-    DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, kbs? "\010" : "\177"))
-    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, kbs? "\177" : "\033[3~"))
+    DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, "\177"))
+    DO(cmd,   KEY_CODE_YES,     KEY_DC,        SEND(focused, "\033[3~"))
     DO(cmd,   KEY_CODE_YES,     KEY_IC,        SEND(focused, "\033[2~"))
     DO(false, OK,               commandkey,    return cmd = true)
     DO(false, OK,               0,             SENDN(focused, "\000", 1))
     DO(false, OK,               '\n',          SEND(focused, "\n"))
     DO(false, OK,               '\r',          SEND(focused, focused->lnm? "\r\n" : "\r"))
     DO(false, KEY_CODE_YES,     KEY_ENTER,     SEND(focused, focused->lnm? "\r\n" : "\r"))
-    DO(false, KEY_CODE_YES,     KEY_UP,        sendarrow(focused, "A"))
-    DO(false, KEY_CODE_YES,     KEY_DOWN,      sendarrow(focused, "B"))
-    DO(false, KEY_CODE_YES,     KEY_RIGHT,     sendarrow(focused, "C"))
-    DO(false, KEY_CODE_YES,     KEY_LEFT,      sendarrow(focused, "D"))
+    DO(false, KEY_CODE_YES,     KEY_UP,        SEND(focused, "\033OA"))
+    DO(false, KEY_CODE_YES,     KEY_DOWN,      SEND(focused, "\033OB"))
+    DO(false, KEY_CODE_YES,     KEY_RIGHT,     SEND(focused, "\033OC"))
+    DO(false, KEY_CODE_YES,     KEY_LEFT,      SEND(focused, "\033OD"))
     DO(false, KEY_CODE_YES,     KEY_HOME,      SEND(focused, "\033[1~"))
     DO(false, KEY_CODE_YES,     KEY_END,       SEND(focused, "\033[4~"))
     DO(false, KEY_CODE_YES,     KEY_PPAGE,     SEND(focused, "\033[5~"))
