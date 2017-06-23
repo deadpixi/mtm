@@ -52,7 +52,6 @@ struct NODE{
     int y, x, sy, sx, h, w, pt, vis, bot, top;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl;
-    wchar_t repc;
     PRINTER g0, g1, gc, gs;
     attr_t sattr;
     WINDOW *win;
@@ -245,9 +244,7 @@ getshell(void) /* Get the user's preferred shell. */
     name (VTPARSER *v, void *p, wchar_t w, wchar_t iw, int argc, int *argv) \
     {                                                                       \
         COMMONVARS
-#define ENDHANDLER                                              \
-        n->repc = 0; /* control sequences cannot be repeated */ \
-    }
+#define ENDHANDLER }
 
 HANDLER(bell) /* Terminal bell. */
     beep();
@@ -544,16 +541,8 @@ HANDLER(print) /* Print a character to the terminal */
     n->gc(n->win, w);
     if (wmove(win, y, x + wcwidth(w)) == ERR)
         n->xenl = true;
-    n->repc = w;
 
     wnoutrefresh(win);
-} /* we don't use ENDHANDLER here because we don't want to clear repc */
-
-HANDLER(rep) /* REP - Repeat Character */
-    if (n->repc){
-        for (int i = 0; i < P1(0); i++)
-            print(v, p, n->repc, 0, 0, NULL);
-    }
 ENDHANDLER
 
 HANDLER(decsca) /* DECSCA - Define protected area */
@@ -607,7 +596,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'^', su);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'b', rep);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
