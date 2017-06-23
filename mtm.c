@@ -477,14 +477,6 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         wcolor_set(win, getpair(n->fg, n->bg), NULL);
 }
 
-HANDLER(cpl) /* CPL - Cursor Previous Line */
-    wmove(win, MAX(n->top, y - P1(0)), 0);
-ENDHANDLER
-
-HANDLER(cnl) /* CNL - Cursor Next Line */
-    wmove(win, MIN(n->bot - 1, y + P1(0)), 0);
-ENDHANDLER
-
 HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
     wmove(win, MIN(n->bot - 1, MAX(n->top, P1(0) - 1)), x);
 ENDHANDLER
@@ -569,8 +561,6 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'E', cnl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'F', cpl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'G', hpa);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
