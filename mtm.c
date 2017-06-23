@@ -285,6 +285,10 @@ HANDLER(ri) /* RI - Reverse Index */
     y == n->top? wscrl(win, -1) : wmove(win, y - 1, x);
 ENDHANDLER
 
+HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
+    wmove(win, y, MIN(P1(0) - 1, mx - 1));
+ENDHANDLER
+
 HANDLER(sc) /* SC - Save Cursor */
     n->gs = n->gc;                           /* save current character set */
     n->sx = x;                               /* save X position            */
@@ -364,20 +368,12 @@ HANDLER(ed) /* ED - Erase in Display */
     wmove(win, y, x);
 ENDHANDLER
 
-HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
-    SEND(n, P0(0)? "\033[3;1;2;120;1;0x" : "\033[2;1;2;120;128;1;0x");
-ENDHANDLER
-
 HANDLER(dsr) /* DSR - Device Status Report */
-    char buf[100] = {0};
-
-    if (P0(0) == 5)
-        strncpy(buf, "\033[0n", 99);
-    else if (P0(0) == 6)
+    if (P0(0) == 6){
+        char buf[100] = {0};
         snprintf(buf, 99, "\033[%d;%dR", y + 1, x + 1);
-
-    if (buf[0])
         SEND(n, buf);
+    }
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
@@ -465,22 +461,6 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         wcolor_set(win, getpair(n->fg, n->bg), NULL);
 }
 
-HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
-    wmove(win, MIN(n->bot - 1, MAX(n->top, P1(0) - 1)), x);
-ENDHANDLER
-
-HANDLER(vpr) /* VPR - Cursor Vertical Relative */
-    wmove(win, MIN(n->bot - 1, MAX(n->top, y + P1(0))), x);
-ENDHANDLER
-
-HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
-    wmove(win, y, MIN(P1(0) - 1, mx - 1));
-ENDHANDLER
-
-HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
-    wmove(win, y, MIN(x + P1(0), mx - 1));
-ENDHANDLER
-
 HANDLER(cr) /* CR - Carriage Return */
     n->xenl = false;
     wmove(win, y, 0);
@@ -557,21 +537,12 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'`', hpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'a', hpr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'c', decid);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'd', vpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'e', vpr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'x', decreqtparm);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'0', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'1', scs);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'2', scs);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rcordecaln);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'A', scs);
