@@ -57,9 +57,6 @@ VTPARSER *
 vtparser_open(void *p);
 
 void
-vtparser_reset(VTPARSER *vp, void *p);
-
-void
 vtparser_close(VTPARSER *vp);
 
 VTCALLBACK
