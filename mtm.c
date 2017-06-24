@@ -304,6 +304,8 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     sgr0(v, p, 0, 0, 0, NULL);
     wclear(win);
     wmove(win, 0, 0);
+    n->fg = n->bg = -1;
+    n->vis = 1;
     n->insert = n->oxenl = n->xenl = false;
     wsetscrreg(win, 0, n->h - 1);
 ENDHANDLER
@@ -495,21 +497,20 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (!n)
         return NULL;
 
-    /* XXX - use ris here */
-    n->fg = n->bg = -1;
-    n->vis = 1;
     n->win = newwin(h, w, y, x);
+    if (!n->win)
+        return freenode(n, false), NULL;
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
     idlok(n->win, TRUE);
     keypad(n->win, TRUE);
-    if (!n->win)
-        return freenode(n, false), NULL;
 
     n->vp = vtparser_open(n);
     if (!n->vp)
         return freenode(n, false), NULL;
     setupevents(n);
+
+    ris(n->vp, n, L'c', 0, 0, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
