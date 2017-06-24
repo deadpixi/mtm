@@ -19,5 +19,8 @@ install: mtm
 	cp mtm $(DESTDIR)/bin
 	cp mtm.1 $(DESTDIR)/share/man/man1
 
+install-terminfo: mtm.ti
+	tic -s -x mtm.ti
+
 clean:
 	rm -f *.o mtm
