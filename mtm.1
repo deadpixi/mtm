@@ -6,9 +6,6 @@
 .Nd a micro-terminal multiplexer
 .Sh SYNOPSIS
 .Nm
-.Op Fl b
-.Op Fl m
-.Op Fl u
 .Op Fl T Ar HOST
 .Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
@@ -21,31 +18,6 @@ terminal session.
 .Pp
 The options are
 .Bl -tag -width Ds
-.It Fl b
-Tell
-.Nm
-to use VT100-style sequences for the backspace and delete keys.
-This is needed only if you instruct
-.Nm
-to advertise itself as some other kind of terminal that sends these sequences
-.Po
-e.g. a VT100
-.Pc "."
-You probably don't need to use this option.
-.It Fl m
-Enable mouse support.
-When mouse support is enabled,
-clicking button 1 will focus the virtual terminal under the click,
-and programs run under
-.Nm
-can request to be advised of mouse events in their virtual terminals.
-.Pp
-Note that enabling mouse support may alter how the host terminal application responds
-to the mouse;
-for example,
-it may require holding down the
-.Dq shift
-key to recognize mouse clicks targeting itself.
 .It Fl T Ar HOST
 Assume that the host terminal
 .Po
@@ -57,7 +29,7 @@ is of type
 .Ar HOST "."
 By default,
 the contents of the
-.Ev HOST
+.Ev TERM
 environment variable are used.
 .It Fl t Ar TERMINAL
 Set the
@@ -77,8 +49,11 @@ By default this is
 .El
 .Pp
 The
-.Fl u
-flag is recognized but ignored,
+.Fl u ,
+.Fl m ,
+and
+.Fl b
+flags are recognized but ignored,
 for backwards compatibility.
 .Pp
 .Ss Usage
@@ -145,62 +120,7 @@ This is the default.
 It is widely supported and its description is installed by default on most systems.
 The only user-visible difference when using this terminal name is that programs will
 not necessarily know how to change cursor visibility.
-.It vt100
-.Nm
-emulates most of the venerable VT100's behavior,
-except for those things that cannot be portably emulated
-.Po
-double-height characters, for example
-.Pc "."
-Note that the VT100 did not support color or changing the cursor's visibility,
-so advertising that
-.Nm
-is a VT100 will cause most programs to stop displaying color.
-The VT100's behavior is almost universally supported.
-.Pp
-When advertising a VT100 terminal type, the
-.Fl b
-option should probably be used.
 .El
-.Ss Host Terminal Capabilities
-.Nm
-presents a consistent set of terminal capabilities to programs run under it.
-However,
-if the host terminal does not support certain features
-.Po
-e.g. mouse tracking,
-color,
-or blinking text
-.Pc
-those features will
-.Po
-obviously
-.Pc
-likewise not be available to programs run under
-.Nm mtm "."
-.Pp
-Note that in some
-.Xr terminfo 5
-databases,
-the default
-.Em xterm
-entries do not describe how to enable mouse position tracking.
-If such tracking is needed,
-setting the host terminal type
-.Po
-via the host's
-.Ev TERM
-environment variable or via the
-.Fl T
-option
-.Pc
-to something else
-.Po
-often
-.Em xterm-1002
-or similar
-.Pc
-may help.
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"
@@ -238,8 +158,6 @@ and will finally use
 .Xr sh 1
 .Xr terminfo 5
 .Sh BUGS
-.Pp
-The mouse-tracking support is still in its preliminary stages.
 .Pp
 .Nm
 will attempt to fit all virtual terminals in the window at once.
