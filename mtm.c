@@ -34,7 +34,7 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-mb] [-T NAME] [-t NAME] [-c KEY]"
+#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]"
 
 /*** DATA TYPES */
 typedef struct NODE NODE;
