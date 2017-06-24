@@ -302,7 +302,6 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     sgr0(v, p, 0, 0, 0, NULL);
     wclear(win);
     wmove(win, 0, 0);
-    n->fg = n->bg = -1;
     n->vis = 1;
     n->insert = n->oxenl = n->xenl = false;
     wsetscrreg(win, 0, n->h - 1);
