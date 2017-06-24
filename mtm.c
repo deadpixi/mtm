@@ -358,11 +358,12 @@ HANDLER(ind) /* IND - Index */
     y == bot - 1? scroll(win) : wmove(win, y + 1, x);
 ENDHANDLER
 
-HANDLER(pnl) /* NL - Newline */
-    ind(v, p, w, 0, 0, NULL);
-ENDHANDLER
-
 HANDLER(print) /* Print a character to the terminal */
+    cchar_t r;
+    attr_t a = A_NORMAL;
+    short cp = 0;
+    wchar_t s[] = {w, 0};
+
     if (wcwidth(w) < 0)
         return;
 
@@ -373,11 +374,6 @@ HANDLER(print) /* Print a character to the terminal */
         n->xenl = false;
         getyx(win, y, x);
     }
-
-    cchar_t r;
-    attr_t a = A_NORMAL;
-    short cp = 0;
-    wchar_t s[] = {w, 0};
 
     wattr_get(win, &a, &cp, NULL);
     setcchar(&r, s, a, cp, NULL);
@@ -401,9 +397,9 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, tab);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, pnl);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, pnl);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, ind);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, ind);
+    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, ind);
     vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuu);
     vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
