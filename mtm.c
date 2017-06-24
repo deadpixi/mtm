@@ -48,7 +48,7 @@ typedef enum{
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
-    int y, x, sy, sx, h, w, pt, vis, bot, top;
+    int y, x, sy, sx, h, w, pt, vis;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl;
     attr_t sattr;
@@ -159,11 +159,13 @@ getshell(void) /* Get the user's preferred shell. */
 #define COMMONVARS                                                  \
     NODE *n = (NODE *)p;                                            \
     WINDOW *win = n->win;                                           \
-    int y, x, my, mx;                                               \
+    int y, x, my, mx, top = 0, bot = 0;                             \
     (void)v; (void)p; (void)w; (void)iw; (void)argc; (void)argv;    \
     (void)win; (void)y; (void)x; (void)my; (void)mx;                \
     getyx(win, y, x);                                               \
-    getmaxyx(win, my, mx);
+    getmaxyx(win, my, mx);                                          \
+    wgetscrreg(win, &top, &bot);                                    \
+    bot++;
 
 #define HANDLER(name)                                                       \
     static void                                                             \
@@ -192,11 +194,11 @@ HANDLER(ich) /* ICH - Insert Character */
 ENDHANDLER
 
 HANDLER(cuu) /* CUU - Cursor Up */
-    wmove(win, MAX(y - P1(0), n->top), x);
+    wmove(win, MAX(y - P1(0), top), x);
 ENDHANDLER
 
 HANDLER(cud) /* CUD - Cursor Down */
-    wmove(win, MIN(y + P1(0), n->bot - 1), x);
+    wmove(win, MIN(y + P1(0), bot - 1), x);
 ENDHANDLER
 
 HANDLER(cuf) /* CUF - Cursor Forward */
@@ -208,7 +210,7 @@ HANDLER(ack) /* ACK - Acknowledge Enquiry */
 ENDHANDLER
 
 HANDLER(ri) /* RI - Reverse Index */
-    y == n->top? wscrl(win, -1) : wmove(win, y - 1, x);
+    y == top? wscrl(win, -1) : wmove(win, y - 1, x);
 ENDHANDLER
 
 HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
@@ -274,20 +276,14 @@ ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
     /* Programs expect IL and DL to scroll as needed, so no insdelln... */
-    wsetscrreg(win, y, n->bot - 1);
+    wsetscrreg(win, y, bot - 1);
     wscrl(win, w == L'L'? -P1(0) : P1(0));
-    wsetscrreg(win, n->top, n->bot - 1);
+    wsetscrreg(win, top, bot - 1);
 ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
-    int t = P1(0) - 1;
-    int b = PD(1, my);
-    if (t < b && b <= my){
-        n->top = t;
-        n->bot = b;
-        wsetscrreg(win, t, b - 1);
+    if (wsetscrreg(win, P1(0) - 1, PD(1, my) - 1) == OK)
         cup(v, p, L'H', 0, 0, NULL);
-    }
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -309,8 +305,6 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     wclear(win);
     wmove(win, 0, 0);
     n->insert = n->oxenl = n->xenl = false;
-    n->top = 0;
-    n->bot = n->h;
     wsetscrreg(win, 0, n->h - 1);
 ENDHANDLER
 
@@ -361,7 +355,7 @@ HANDLER(cr) /* CR - Carriage Return */
 ENDHANDLER
 
 HANDLER(ind) /* IND - Index */
-    y == n->bot - 1? scroll(win) : wmove(win, y + 1, x);
+    y == bot - 1? scroll(win) : wmove(win, y + 1, x);
 ENDHANDLER
 
 HANDLER(pnl) /* NL - Newline */
@@ -504,8 +498,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     /* XXX - use ris here */
     n->fg = n->bg = -1;
     n->vis = 1;
-    n->top = 0;
-    n->bot = h;
     n->win = newwin(h, w, y, x);
     nodelay(n->win, TRUE);
     scrollok(n->win, TRUE);
