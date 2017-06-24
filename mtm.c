@@ -144,11 +144,11 @@ getshell(void) /* Get the user's preferred shell. */
  *      SEND(n, s)     - Write string s to node n's host.
  *      (END)HANDLER   - Declare/end a handler function
  *      COMMONVARS     - All of the common variables for a handler.
- *                       x, y   - cursor position
- *                       mx, my - max possible values for x and y
- *                       n      - the current node
- *                       win    - the current window
- *
+ *                       x, y     - cursor position
+ *                       mx, my   - max possible values for x and y
+ *                       n        - the current node
+ *                       win      - the current window
+ *                       top, bot - the scrolling region
  * The funny names for handlers are from their ANSI/ECMA/DEC mnemonics.
  */
 #define PD(x, d) (argc < (x) || !argv? (d) : argv[(x)])
