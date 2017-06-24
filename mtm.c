@@ -371,6 +371,8 @@ HANDLER(print) /* Print a character to the terminal */
 
     if (n->xenl){
         n->xenl = false;
+        cr(v, p, w, 0, 0, NULL);
+        ind(v, p, w, 0, 0, NULL);
         getyx(win, y, x);
     }
 
