@@ -28,6 +28,17 @@ Stability
     - Accessibility improvements.
     - Fixes to keep it working on modern OSes.
 
+The Full-Featured Release
+=========================
+mtm has always been designed to be small and minimalist.  For a while
+there, I was adding feature upon feature, just for the fun of it, but
+that defeated the purpose.
+
+To see mtm in all its fully-featured glory, check out the `full-featured`
+tag.  That version is no longer supported, but if there are features
+that that you absolutely have to have, open a bug and I'll pull them back
+into master.
+
 Community
 =========
 
