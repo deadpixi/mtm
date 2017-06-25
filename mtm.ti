@@ -13,3 +13,7 @@ mtm|The Micro Terminal Multiplexer,
 	sgr=\E[0%?%p1%p3%|%t;7%;%?%p2%t;4%;%?%p4%t;5%;%?%p6%t;1%;%?%p7%t;8%;m,
 	ht=^I, kend=\E[4~, el1=\E[1K, u6=\E[%i%d;%dR, u7=\E[6n, op=\E[39;49m,
 	setaf=\E[%p1%{30}%+%dm, setab=\E[%p1%'('%+%dm, sitm=\E[3m, ritm=\E[23m,
+
+mtm-noutf|The Micro Terminal Multiplexer without UTF-8 support,
+    @U8,
+    use=mtm,
