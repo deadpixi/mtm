@@ -314,34 +314,34 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         sgr0(v, p, 0, 0, 0, NULL);
 
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: sgr0(v, p, 0, 0, 0, NULL);           break;
-        case  1: wattron(win,  A_BOLD);               break;
-        case  3: wattron(win,  A_ITALIC);             break;
-        case  4: wattron(win,  A_UNDERLINE);          break;
-        case  5: wattron(win,  A_BLINK);              break;
-        case  7: wattron(win,  A_REVERSE);            break;
-        case  8: wattron(win,  A_INVIS);              break;
-        case 23: wattroff(win, A_ITALIC);             break;
-        case 24: wattroff(win, A_UNDERLINE);          break;
-        case 27: wattroff(win, A_REVERSE);            break;
-        case 30: n->fg = COLOR_BLACK;   doc = true;   break;
-        case 31: n->fg = COLOR_RED;     doc = true;   break;
-        case 32: n->fg = COLOR_GREEN;   doc = true;   break;
-        case 33: n->fg = COLOR_YELLOW;  doc = true;   break;
-        case 34: n->fg = COLOR_BLUE;    doc = true;   break;
-        case 35: n->fg = COLOR_MAGENTA; doc = true;   break;
-        case 36: n->fg = COLOR_CYAN;    doc = true;   break;
-        case 37: n->fg = COLOR_WHITE;   doc = true;   break;
-        case 39: n->fg = -1;            doc = true;   break;
-        case 40: n->bg = COLOR_BLACK;   doc = true;   break;
-        case 41: n->bg = COLOR_RED;     doc = true;   break;
-        case 42: n->bg = COLOR_GREEN;   doc = true;   break;
-        case 43: n->bg = COLOR_YELLOW;  doc = true;   break;
-        case 44: n->bg = COLOR_BLUE;    doc = true;   break;
-        case 45: n->bg = COLOR_MAGENTA; doc = true;   break;
-        case 46: n->bg = COLOR_CYAN;    doc = true;   break;
-        case 47: n->bg = COLOR_WHITE;   doc = true;   break;
-        case 49: n->bg = -1;            doc = true;   break;
+        case  0: sgr0(v, p, 0, 0, 0, NULL);         break;
+        case  1: wattron(win,  A_BOLD);             break;
+        case  3: wattron(win,  A_ITALIC);           break;
+        case  4: wattron(win,  A_UNDERLINE);        break;
+        case  5: wattron(win,  A_BLINK);            break;
+        case  7: wattron(win,  A_REVERSE);          break;
+        case  8: wattron(win,  A_INVIS);            break;
+        case 23: wattroff(win, A_ITALIC);           break;
+        case 24: wattroff(win, A_UNDERLINE);        break;
+        case 27: wattroff(win, A_REVERSE);          break;
+        case 30: n->fg = COLOR_BLACK;   doc = true; break;
+        case 31: n->fg = COLOR_RED;     doc = true; break;
+        case 32: n->fg = COLOR_GREEN;   doc = true; break;
+        case 33: n->fg = COLOR_YELLOW;  doc = true; break;
+        case 34: n->fg = COLOR_BLUE;    doc = true; break;
+        case 35: n->fg = COLOR_MAGENTA; doc = true; break;
+        case 36: n->fg = COLOR_CYAN;    doc = true; break;
+        case 37: n->fg = COLOR_WHITE;   doc = true; break;
+        case 39: n->fg = -1;            doc = true; break;
+        case 40: n->bg = COLOR_BLACK;   doc = true; break;
+        case 41: n->bg = COLOR_RED;     doc = true; break;
+        case 42: n->bg = COLOR_GREEN;   doc = true; break;
+        case 43: n->bg = COLOR_YELLOW;  doc = true; break;
+        case 44: n->bg = COLOR_BLUE;    doc = true; break;
+        case 45: n->bg = COLOR_MAGENTA; doc = true; break;
+        case 46: n->bg = COLOR_CYAN;    doc = true; break;
+        case 47: n->bg = COLOR_WHITE;   doc = true; break;
+        case 49: n->bg = -1;            doc = true; break;
     }
 
     if (doc)
