@@ -705,10 +705,8 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 
     if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)){
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
-        while (r > 0){
+        if (r > 0)
             vtparser_write(n->vp, iobuf, r);
-            r = read(n->pt, iobuf, BUFSIZ);
-        }
         if (r < 0 && errno != EINTR && errno != EWOULDBLOCK)
             return deletenode(n), false;
     }
