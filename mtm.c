@@ -554,12 +554,12 @@ focus(NODE *n) /* Focus a node. */
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n)  n->y + n->h / 2, n->x - 2
 #define RIGHT(n) n->y + n->h / 2, n->x + n->w + 2
-#define IN(n, y, x) (y >= n->y && y <= n->y + n->h && \
-                     x >= n->x && x <= n->x + n->w)
 
 static NODE *
 findnode(NODE *n, int y, int x) /* Find the node enclosing y,x. */
 {
+    #define IN(n, y, x) (y >= n->y && y <= n->y + n->h && \
+                         x >= n->x && x <= n->x + n->w)
     if (IN(n, y, x)){
         if (n->c1 && IN(n->c1, y, x))
             return findnode(n->c1, y, x);
