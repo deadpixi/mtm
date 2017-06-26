@@ -784,7 +784,9 @@ main(int argc, char **argv)
         case 'c': commandkey = CTL(optarg[0]); break;
         case 'T': setenv("TERM", optarg, 1);   break;
         case 't': term = optarg;               break;
+        case 'b': /* ignored */                break;
         case 'u': /* ignored */                break;
+        case 'm': /* ignored */                break;
         default:  quit(EXIT_FAILURE, USAGE);   break;
     }
 
