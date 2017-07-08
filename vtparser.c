@@ -37,14 +37,17 @@ typedef struct STATE STATE;
 #define MAXPARAM    16
 #define MAXCALLBACK 127
 #define MAXACTIONS  25
+#define MAXOSC      100
 
 struct VTPARSER{
     STATE *s;
-    int narg, args[MAXPARAM], inter, nmb;
+    int narg, args[MAXPARAM], inter, nmb, oscbuf[MAXOSC + 1];
     mbstate_t ms;
     char mb[MAXBUF + 1];
-    VTCALLBACK print, cons[MAXCALLBACK], escs[MAXCALLBACK], csis[MAXCALLBACK];
     void *p;
+    size_t oscn;
+    VTCALLBACK print, osc, cons[MAXCALLBACK], escs[MAXCALLBACK],
+               csis[MAXCALLBACK];
 };
 
 struct ACTION{
@@ -60,14 +63,15 @@ struct STATE{
 
 /**** GLOBALS */
 static STATE ground, escape, escape_intermediate, csi_entry,
-             csi_ignore, csi_param, csi_intermediate;
+             csi_ignore, csi_param, csi_intermediate, osc_string;
 
 /**** ACTION FUNCTIONS */
 static void
 reset(VTPARSER *v)
 {
-    v->inter = v->narg = 0;
+    v->inter = v->narg = v->oscn = 0;
     memset(v->args, 0, sizeof(v->args));
+    memset(v->oscbuf, 0, sizeof(v->oscbuf));
 }
 
 static void
@@ -83,6 +87,13 @@ collect(VTPARSER *v, wchar_t w)
 }
 
 static void
+collectosc(VTPARSER *v, wchar_t w)
+{
+    if (v->oscn < MAXOSC)
+        v->oscbuf[v->oscn++] = w;
+}
+
+static void
 param(VTPARSER *v, wchar_t w)
 {
     v->narg = v->narg? v->narg : 1;
@@ -95,18 +106,19 @@ param(VTPARSER *v, wchar_t w)
     }
 }
 
-#define DO(k, t, f, n, a)                   \
-    static void                             \
-    do ## k (VTPARSER *v, wchar_t w)        \
-    {                                       \
-        if (t)                              \
-            f (v, v->p, w, v->inter, n, a); \
+#define DO(k, t, f, n, a)                               \
+    static void                                         \
+    do ## k (VTPARSER *v, wchar_t w)                    \
+    {                                                   \
+        if (t)                                          \
+            f (v, v->p, w, v->inter, n, a, v->oscbuf);  \
     }
 
 DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
 DO(escape,  w < MAXCALLBACK && v->escs[w], v->escs[w], v->inter > 0, &v->inter)
 DO(csi,     w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
 DO(print,   v->print, v->print, 0, NULL)
+DO(osc,     v->osc, v->osc, 0, NULL)
 
 /**** PUBLIC FUNCTIONS */
 VTPARSER *
@@ -137,6 +149,7 @@ vtparser_onevent(VTPARSER *vp, vtparser_event_t t, wchar_t w, VTCALLBACK cb)
         case VTPARSER_ESCAPE:  o = vp->escs[w]; vp->escs[w] = cb; break;
         case VTPARSER_CSI:     o = vp->csis[w]; vp->csis[w] = cb; break;
         case VTPARSER_PRINT:   o = vp->print;   vp->print   = cb; break;
+        case VTPARSER_OSC:     o = vp->osc;     vp->osc     = cb; break;
     }
 
     return o;
@@ -198,10 +211,12 @@ vtparser_write(VTPARSER *vp, const char *s, size_t n)
             {0x18, 0x18, docontrol, &ground}, \
             {0x1a, 0x1a, docontrol, &ground}, \
             {0x1b, 0x1b, ignore,    &escape}, \
-            {0x01, 0x17, docontrol, NULL},    \
+            {0x01, 0x06, docontrol, NULL},    \
+            {0x08, 0x17, docontrol, NULL},    \
             {0x19, 0x19, docontrol, NULL},    \
             {0x1c, 0x1f, docontrol, NULL},    \
             __VA_ARGS__ ,                     \
+            {0x07, 0x07, docontrol, NULL},    \
             {0x00, 0x00, NULL,      NULL}     \
         }                                     \
     }
@@ -218,7 +233,8 @@ MAKESTATE(escape, reset,
     {0x5a, 0x5a, doescape, &ground},
     {0x5c, 0x5c, doescape, &ground},
     {0x60, 0x7e, doescape, &ground},
-    {0x5b, 0x5b, ignore,   &csi_entry}
+    {0x5b, 0x5b, ignore,   &csi_entry},
+    {0x5d, 0x5d, ignore,   &osc_string}
 );
 
 MAKESTATE(escape_intermediate, NULL,
@@ -253,4 +269,9 @@ MAKESTATE(csi_intermediate, NULL,
     {0x20, 0x2f, collect, NULL},
     {0x30, 0x3f, ignore,  &csi_ignore},
     {0x40, 0x7e, docsi,   &ground}
+);
+
+MAKESTATE(osc_string, reset,
+    {0x07, 0x07, doosc, &ground},
+    {0x20, 0x7f, collectosc, NULL}
 );

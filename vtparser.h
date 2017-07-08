@@ -43,12 +43,13 @@
 typedef struct VTPARSER VTPARSER;
 
 typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
-                           int argc, int *argv);
+                           int argc, int *argv, const wchar_t *osc);
 
 typedef enum{
     VTPARSER_CONTROL,
     VTPARSER_ESCAPE,
     VTPARSER_CSI,
+    VTPARSER_OSC,
     VTPARSER_PRINT
 } vtparser_event_t;
 
