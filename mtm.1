@@ -9,6 +9,7 @@
 .Op Fl T Ar HOST
 .Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
+.Op Fl b Ar COLOR
 .Sh DESCRIPTION
 .Nm
 is a terminal multiplexer,
@@ -46,13 +47,28 @@ in combination with the
 key.
 By default this is
 .Dq "g" "."
+.It Fl b Ar COLOR
+Set the title bar color to
+.Ar COLOR ","
+which may be one of
+.Li BLACK ","
+.Li RED ","
+.Li GREEN ","
+.Li YELLOW ","
+.Li BLUE ","
+.Li MAGENTA ","
+.Li CYAN ","
+or
+.Li WHITE
+.Po
+the default
+.Pc "."
 .El
 .Pp
 The
-.Fl u ,
-.Fl m ,
+.Fl u
 and
-.Fl b
+.Fl m
 flags are recognized but ignored,
 for backwards compatibility.
 .Pp
