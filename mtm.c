@@ -31,26 +31,27 @@
 #include "vtparser.h"
 
 #define MAXCTABLE 72
+#define MAXTITLE 100
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
 #define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]"
 
 /*** DATA TYPES */
-typedef struct NODE NODE;
-
 typedef enum{
     HORIZONTAL,
     VERTICAL,
     VIEW
 } node_t;
 
+typedef struct NODE NODE;
 struct NODE{
     node_t t;
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl;
+    wchar_t title[MAXTITLE + 1];
     attr_t sattr;
     WINDOW *win;
     VTPARSER *vp;
@@ -69,6 +70,7 @@ static NODE *root, *focused;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
+static WINDOW *titlewin;
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -161,16 +163,17 @@ getshell(void) /* Get the user's preferred shell. */
     WINDOW *win = n->win;                                           \
     int y, x, my, mx, top = 0, bot = 0;                             \
     (void)v; (void)p; (void)w; (void)iw; (void)argc; (void)argv;    \
-    (void)win; (void)y; (void)x; (void)my; (void)mx;                \
+    (void)win; (void)y; (void)x; (void)my; (void)mx; (void)osc;     \
     getyx(win, y, x);                                               \
     getmaxyx(win, my, mx);                                          \
     wgetscrreg(win, &top, &bot);                                    \
     bot++;
 
-#define HANDLER(name)                                                       \
-    static void                                                             \
-    name (VTPARSER *v, void *p, wchar_t w, wchar_t iw, int argc, int *argv) \
-    {                                                                       \
+#define HANDLER(name)                                   \
+    static void                                         \
+    name (VTPARSER *v, void *p, wchar_t w, wchar_t iw,  \
+          int argc, int *argv, const wchar_t *osc)      \
+    {                                                   \
         COMMONVARS
 #define ENDHANDLER }
 
@@ -260,7 +263,7 @@ HANDLER(ed) /* ED - Erase in Display */
                 wclrtoeol(win);
             }
             wmove(win, y, x);
-            el(v, p, w, iw, 1, &o);
+            el(v, p, w, iw, 1, &o, NULL);
             break;
     }
     wmove(win, y, x);
@@ -281,7 +284,7 @@ ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
     if (wsetscrreg(win, P1(0) - 1, PD(1, my) - 1) == OK)
-        cup(v, p, L'H', 0, 0, NULL);
+        cup(v, p, L'H', 0, 0, NULL, NULL);
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -299,7 +302,8 @@ HANDLER(sgr0) /* Reset SGR to default */
 ENDHANDLER
 
 HANDLER(ris) /* RIS - Reset to Initial State */
-    sgr0(v, p, 0, 0, 0, NULL);
+    swprintf(n->title, MAXTITLE, L"%s", getshell());
+    sgr0(v, p, 0, 0, 0, NULL, NULL);
     wclear(win);
     wmove(win, 0, 0);
     n->vis = 1;
@@ -311,10 +315,10 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
     bool doc = false;
 
     if (!argc)
-        sgr0(v, p, 0, 0, 0, NULL);
+        sgr0(v, p, 0, 0, 0, NULL, NULL);
 
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: sgr0(v, p, 0, 0, 0, NULL);         break;
+        case  0: sgr0(v, p, 0, 0, 0, NULL, NULL);   break;
         case  1: wattron(win,  A_BOLD);             break;
         case  3: wattron(win,  A_ITALIC);           break;
         case  4: wattron(win,  A_UNDERLINE);        break;
@@ -357,6 +361,11 @@ HANDLER(ind) /* IND - Index */
     y == bot - 1? scroll(win) : wmove(win, y + 1, x);
 ENDHANDLER
 
+HANDLER(osc) /* OSC - Operating System Command */
+    if (wcslen(osc) > 2 && osc[1] == L';')
+        wcsncpy(n->title, osc + 2, MAXTITLE - 1);
+ENDHANDLER
+
 HANDLER(print) /* Print a character to the terminal */
     cchar_t r;
     attr_t a = A_NORMAL;
@@ -367,12 +376,12 @@ HANDLER(print) /* Print a character to the terminal */
         return;
 
     if (n->insert)
-        ich(v, p, L'@', 0, 0, NULL);
+        ich(v, p, L'@', 0, 0, NULL, NULL);
 
     if (n->xenl){
         n->xenl = false;
-        cr(v, p, w, 0, 0, NULL);
-        ind(v, p, w, 0, 0, NULL);
+        cr(v, p, w, 0, 0, NULL, NULL);
+        ind(v, p, w, 0, 0, NULL, NULL);
         getyx(win, y, x);
     }
 
@@ -426,6 +435,7 @@ setupevents(NODE *n)
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
     vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
+    vtparser_onevent(n->vp, VTPARSER_OSC,     0,    osc);
 }
 
 /*** MTM FUNCTIONS
@@ -471,6 +481,14 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
+updatetitle(void) /* update the current title */
+{
+    wclear(titlewin);
+    mvwaddwstr(titlewin, 0, 0, focused->title);
+    wrefresh(titlewin);
+}
+
+static void
 fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused){
@@ -503,7 +521,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
         return freenode(n, false), NULL;
     setupevents(n);
 
-    ris(n->vp, n, L'c', 0, 0, NULL);
+    ris(n->vp, n, L'c', 0, 0, NULL, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
@@ -616,7 +634,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
-    csr(n->vp, n, L'r', 0, 0, NULL);
+    csr(n->vp, n, L'r', 0, 0, NULL, NULL);
     wmove(n->win, oy, ox);
     wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
@@ -769,8 +787,22 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         doupdate();
+        updatetitle();
         fixcursor();
     }
+}
+
+int
+doripoff(WINDOW *w, int i)
+{
+    (void)i;
+    titlewin = w;
+
+    wbkgd(w, ' ' | A_REVERSE);
+    werase(w);
+    wrefresh(w);
+
+    return 0;
 }
 
 int
@@ -790,6 +822,7 @@ main(int argc, char **argv)
         default:  quit(EXIT_FAILURE, USAGE);   break;
     }
 
+    ripoffline(1, doripoff);
     initscr();
     raw();
     noecho();
