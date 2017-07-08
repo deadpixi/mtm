@@ -538,6 +538,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     else if (pid == 0){
         setsid();
         setenv("TERM", term, 1);
+        setenv("MTM", "true", 1);
         signal(SIGCHLD, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
