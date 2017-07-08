@@ -74,7 +74,7 @@ Usage
 
 Usage is simple::
 
-    mtm [-T NAME] [-t NAME] [-c KEY]
+    mtm [-T NAME] [-t NAME] [-c KEY] [-b COLOR]
 
 The `-T` flag tells mtm to assume a different kind of host terminal.
 
@@ -86,7 +86,9 @@ The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
 this is `g`.
 
-mtm also recognizes but ignores the `-u`, `-b`, and `-u` flags, for backwards
+The `-b` flag lets you specify the background color for the status bar.
+
+mtm also recognizes but ignores the `-u` and `-u` flags, for backwards
 compatibility with older versions.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
