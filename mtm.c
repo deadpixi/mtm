@@ -71,6 +71,7 @@ static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
 static WINDOW *titlewin;
+static short titlecolor = COLOR_WHITE;
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -78,6 +79,7 @@ static void draw(NODE *n);
 static void reshapechildren(NODE *n);
 static const char *term = "eterm-color";
 static void freenode(NODE *n, bool recursive);
+static void updatetitle(void);
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -362,8 +364,11 @@ HANDLER(ind) /* IND - Index */
 ENDHANDLER
 
 HANDLER(osc) /* OSC - Operating System Command */
-    if (wcslen(osc) > 2 && osc[1] == L';')
+    if (wcslen(osc) >= 2 && osc[1] == L';'){
         wcsncpy(n->title, osc + 2, MAXTITLE - 1);
+        if (n == focused)
+            updatetitle();
+    }
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
@@ -483,7 +488,11 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 static void
 updatetitle(void) /* update the current title */
 {
+    short fg = titlecolor == COLOR_BLACK? COLOR_WHITE : COLOR_BLACK;
+
+    wbkgd(titlewin, ' ' | COLOR_PAIR(getpair(fg, titlecolor)));
     wclear(titlewin);
+    wattrset(titlewin, COLOR_PAIR(getpair(fg, titlecolor)));
     mvwaddwstr(titlewin, 0, 0, focused->title);
     wrefresh(titlewin);
 }
@@ -563,6 +572,7 @@ focus(NODE *n) /* Focus a node. */
         return;
     else if (n->t == VIEW){
         focused = n;
+        updatetitle();
         wnoutrefresh(n->win);
     } else
         focus(n->c1? n->c1 : n->c2);
@@ -787,7 +797,6 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         doupdate();
-        updatetitle();
         fixcursor();
     }
 }
@@ -798,11 +807,25 @@ doripoff(WINDOW *w, int i)
     (void)i;
     titlewin = w;
 
-    wbkgd(w, ' ' | A_REVERSE);
     werase(w);
     wrefresh(w);
 
     return 0;
+}
+
+static short
+nametocolor(const char *c)
+{
+    if      (strcmp(c, "black") == 0)   return COLOR_BLACK;
+    else if (strcmp(c, "red") == 0)     return COLOR_RED;
+    else if (strcmp(c, "green") == 0)   return COLOR_GREEN;
+    else if (strcmp(c, "yellow") == 0)  return COLOR_YELLOW;
+    else if (strcmp(c, "blue") == 0)    return COLOR_BLUE;
+    else if (strcmp(c, "magenta") == 0) return COLOR_MAGENTA;
+    else if (strcmp(c, "cyan") == 0)    return COLOR_CYAN;
+    else if (strcmp(c, "white") == 0)   return COLOR_WHITE;
+
+    return fprintf(stderr, "invalid color\n"), exit(EXIT_FAILURE), -1;
 }
 
 int
@@ -812,14 +835,14 @@ main(int argc, char **argv)
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
     int c = 0;
-    while ((c = getopt(argc, argv, "mubT:t:c:")) != -1) switch (c){
-        case 'c': commandkey = CTL(optarg[0]); break;
-        case 'T': setenv("TERM", optarg, 1);   break;
-        case 't': term = optarg;               break;
-        case 'b': /* ignored */                break;
-        case 'u': /* ignored */                break;
-        case 'm': /* ignored */                break;
-        default:  quit(EXIT_FAILURE, USAGE);   break;
+    while ((c = getopt(argc, argv, "mub:T:t:c:")) != -1) switch (c){
+        case 'c': commandkey = CTL(optarg[0]);      break;
+        case 'T': setenv("TERM", optarg, 1);        break;
+        case 't': term = optarg;                    break;
+        case 'b': titlecolor = nametocolor(optarg); break;
+        case 'u': /* ignored */                     break;
+        case 'm': /* ignored */                     break;
+        default:  quit(EXIT_FAILURE, USAGE);        break;
     }
 
     ripoffline(1, doripoff);
