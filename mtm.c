@@ -677,6 +677,10 @@ reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
         reshapeview(n, y, x, h, w);
     else
         reshapechildren(n);
+
+    if (n == root)
+        updatetitle();
+
     draw(n);
     wnoutrefresh(n->win);
 }
@@ -748,7 +752,8 @@ handlechar(int r, int k) /* Handle a single input character. */
 {
     static bool cmd = false;
 
-    #define DO(s, x, i, a) if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
+    #define DO(s, x, i, a) \
+        if (r == x && s == cmd && i == k) { a ; cmd = false; return true;}
     DO(cmd,   ERR,              k,             return false)
     DO(cmd,   KEY_CODE_YES,     KEY_RESIZE,    reshape(root, 0, 0, LINES, COLS))
     DO(cmd,   KEY_CODE_YES,     KEY_BACKSPACE, SEND(focused, "\177"))
