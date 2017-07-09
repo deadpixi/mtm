@@ -28,12 +28,9 @@
 #include <string.h>
 #include "vtparser.h"
 
-/**** FORWARD DECLARATIONS */
-typedef struct ACTION ACTION;
-
 /**** DATA TYPES */
 #define MAXACTIONS  25
-
+typedef struct ACTION ACTION;
 struct ACTION{
     wchar_t lo, hi;
     void (*cb)(VTPARSER *p, wchar_t w);
