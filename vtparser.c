@@ -30,25 +30,9 @@
 
 /**** FORWARD DECLARATIONS */
 typedef struct ACTION ACTION;
-typedef struct STATE STATE;
 
 /**** DATA TYPES */
-#define MAXBUF      100
-#define MAXPARAM    16
-#define MAXCALLBACK 127
 #define MAXACTIONS  25
-#define MAXOSC      100
-
-struct VTPARSER{
-    STATE *s;
-    int narg, args[MAXPARAM], inter, nmb, oscbuf[MAXOSC + 1];
-    mbstate_t ms;
-    char mb[MAXBUF + 1];
-    void *p;
-    size_t oscn;
-    VTCALLBACK print, osc, cons[MAXCALLBACK], escs[MAXCALLBACK],
-               csis[MAXCALLBACK];
-};
 
 struct ACTION{
     wchar_t lo, hi;
@@ -69,7 +53,7 @@ static STATE ground, escape, escape_intermediate, csi_entry,
 static void
 reset(VTPARSER *v)
 {
-    v->inter = v->narg = v->oscn = 0;
+    v->inter = v->narg = v->nosc = 0;
     memset(v->args, 0, sizeof(v->args));
     memset(v->oscbuf, 0, sizeof(v->oscbuf));
 }
@@ -89,8 +73,8 @@ collect(VTPARSER *v, wchar_t w)
 static void
 collectosc(VTPARSER *v, wchar_t w)
 {
-    if (v->oscn < MAXOSC)
-        v->oscbuf[v->oscn++] = w;
+    if (v->nosc < MAXOSC)
+        v->oscbuf[v->nosc++] = w;
 }
 
 static void
@@ -121,23 +105,13 @@ DO(print,   v->print, v->print, 0, NULL)
 DO(osc,     v->osc, v->osc, 0, NULL)
 
 /**** PUBLIC FUNCTIONS */
-VTPARSER *
-vtparser_open(void *p)
+bool
+vtparser_init(VTPARSER *v, void *p)
 {
-    VTPARSER *v = calloc(1, sizeof(VTPARSER));
-    if (!v)
-        return NULL;
-
     v->s = &ground;
     v->p = p;
 
     return v;
-}
-
-void
-vtparser_close(VTPARSER *vp)
-{
-    free(vp);
 }
 
 VTCALLBACK

@@ -54,7 +54,7 @@ struct NODE{
     wchar_t title[MAXTITLE + 1];
     attr_t sattr;
     WINDOW *win;
-    VTPARSER *vp;
+    VTPARSER vp;
 };
 
 typedef struct COLORTABLE COLORTABLE;
@@ -408,39 +408,39 @@ ENDHANDLER
 static void
 setupevents(NODE *n)
 {
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x05, ack);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x07, bell);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x08, cub);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x09, tab);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0a, ind);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0b, ind);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0c, ind);
-    vtparser_onevent(n->vp, VTPARSER_CONTROL, 0x0d, cr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'A', cuu);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'B', cud);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'C', cuf);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'D', cub);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'G', hpa);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'H', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'J', ed);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'K', el);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'L', idl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'M', idl);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'P', dch);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'@', ich);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'f', cup);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'h', mode);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'l', mode);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'm', sgr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'n', dsr);
-    vtparser_onevent(n->vp, VTPARSER_CSI,     L'r', csr);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'7', sc);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'8', rc);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'D', ind);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'M', ri);
-    vtparser_onevent(n->vp, VTPARSER_ESCAPE,  L'c', ris);
-    vtparser_onevent(n->vp, VTPARSER_PRINT,   0,    print);
-    vtparser_onevent(n->vp, VTPARSER_OSC,     0,    osc);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x05, ack);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x07, bell);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x08, cub);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x09, tab);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x0a, ind);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x0b, ind);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x0c, ind);
+    vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x0d, cr);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'A', cuu);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'B', cud);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'C', cuf);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'D', cub);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'G', hpa);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'H', cup);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'J', ed);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'K', el);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'L', idl);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'M', idl);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'P', dch);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'@', ich);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'f', cup);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'h', mode);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'l', mode);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'm', sgr);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'n', dsr);
+    vtparser_onevent(&n->vp, VTPARSER_CSI,     L'r', csr);
+    vtparser_onevent(&n->vp, VTPARSER_ESCAPE,  L'7', sc);
+    vtparser_onevent(&n->vp, VTPARSER_ESCAPE,  L'8', rc);
+    vtparser_onevent(&n->vp, VTPARSER_ESCAPE,  L'D', ind);
+    vtparser_onevent(&n->vp, VTPARSER_ESCAPE,  L'M', ri);
+    vtparser_onevent(&n->vp, VTPARSER_ESCAPE,  L'c', ris);
+    vtparser_onevent(&n->vp, VTPARSER_PRINT,   0,    print);
+    vtparser_onevent(&n->vp, VTPARSER_OSC,     0,    osc);
 }
 
 /*** MTM FUNCTIONS
@@ -471,8 +471,6 @@ freenode(NODE *n, bool recurse) /* Free a node. */
     if (n){
         if (n->win)
             delwin(n->win);
-        if (n->vp)
-            vtparser_close(n->vp);
         if (recurse)
             freenode(n->c1, true);
         if (recurse)
@@ -525,12 +523,11 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     idlok(n->win, TRUE);
     keypad(n->win, TRUE);
 
-    n->vp = vtparser_open(n);
-    if (!n->vp)
+    if (!vtparser_init(&n->vp, n))
         return freenode(n, false), NULL;
     setupevents(n);
 
-    ris(n->vp, n, L'c', 0, 0, NULL, NULL);
+    ris(&n->vp, n, L'c', 0, 0, NULL, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
     if (pid < 0)
@@ -645,7 +642,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     mvwin(n->win, 0, 0);
     wresize(n->win, h? h : 2, w? w : 2);
     mvwin(n->win, y, x);
-    csr(n->vp, n, L'r', 0, 0, NULL, NULL);
+    csr(&n->vp, n, L'r', 0, 0, NULL, NULL);
     wmove(n->win, oy, ox);
     wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
@@ -739,7 +736,7 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
     if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)){
         ssize_t r = read(n->pt, iobuf, BUFSIZ);
         if (r > 0)
-            vtparser_write(n->vp, iobuf, r);
+            vtparser_write(&n->vp, iobuf, r);
         if (r < 0 && errno != EINTR && errno != EWOULDBLOCK)
             return deletenode(n), false;
     }
