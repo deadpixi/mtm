@@ -81,10 +81,8 @@ param(VTPARSER *v, wchar_t w)
 
     if (w == L';')
         v->args[v->narg++] = 0;
-    else if (v->narg < MAXPARAM){
-        if (v->args[v->narg - 1] < 9999)
-            v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
-    }
+    else if (v->narg < MAXPARAM && v->args[v->narg - 1] < 9999)
+        v->args[v->narg - 1] = v->args[v->narg - 1] * 10 + (w - 0x30);
 }
 
 #define DO(k, t, f, n, a)                               \
