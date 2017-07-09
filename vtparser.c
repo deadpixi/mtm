@@ -191,7 +191,7 @@ vtparser_write(VTPARSER *vp, const char *s, size_t n)
     }
 
 MAKESTATE(ground, NULL,
-    {WCHAR_MIN, WCHAR_MAX, doprint, NULL}
+    {0x20, WCHAR_MAX, doprint, NULL}
 );
 
 MAKESTATE(escape, reset,
