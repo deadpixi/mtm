@@ -819,15 +819,14 @@ doripoff(WINDOW *w, int i)
 static short
 nametocolor(const char *c)
 {
-    if      (strcmp(c, "black") == 0)   return COLOR_BLACK;
-    else if (strcmp(c, "red") == 0)     return COLOR_RED;
-    else if (strcmp(c, "green") == 0)   return COLOR_GREEN;
-    else if (strcmp(c, "yellow") == 0)  return COLOR_YELLOW;
-    else if (strcmp(c, "blue") == 0)    return COLOR_BLUE;
+    if      (strcmp(c, "black")   == 0) return COLOR_BLACK;
+    else if (strcmp(c, "red")     == 0) return COLOR_RED;
+    else if (strcmp(c, "green")   == 0) return COLOR_GREEN;
+    else if (strcmp(c, "yellow")  == 0) return COLOR_YELLOW;
+    else if (strcmp(c, "blue")    == 0) return COLOR_BLUE;
     else if (strcmp(c, "magenta") == 0) return COLOR_MAGENTA;
-    else if (strcmp(c, "cyan") == 0)    return COLOR_CYAN;
-    else if (strcmp(c, "white") == 0)   return COLOR_WHITE;
-
+    else if (strcmp(c, "cyan")    == 0) return COLOR_CYAN;
+    else if (strcmp(c, "white")   == 0) return COLOR_WHITE;
     return fprintf(stderr, "invalid color\n"), exit(EXIT_FAILURE), -1;
 }
 
