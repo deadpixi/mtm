@@ -110,7 +110,7 @@ vtparser_init(VTPARSER *v, void *p)
 }
 
 VTCALLBACK
-vtparser_onevent(VTPARSER *vp, vtparser_event_t t, wchar_t w, VTCALLBACK cb)
+vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
 {
     VTCALLBACK o = NULL;
     if (w < MAXCALLBACK) switch (t){

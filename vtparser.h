@@ -66,14 +66,14 @@ typedef enum{
     VTPARSER_CSI,
     VTPARSER_OSC,
     VTPARSER_PRINT
-} vtparser_event_t;
+} VtEvent;
 
 /**** FUNCTIONS */
 bool
 vtparser_init(VTPARSER *, void *p);
 
 VTCALLBACK
-vtparser_onevent(VTPARSER *vp, vtparser_event_t t, wchar_t w, VTCALLBACK cb);
+vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
 
 void
 vtparser_write(VTPARSER *vp, const char *s, size_t n);
