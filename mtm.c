@@ -281,7 +281,9 @@ ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line */
     /* insdelln inserts lines above, not below, so we scroll instead */
+    wsetscrreg(win, y, bot - 1);
     wscrl(win, w == L'L'? -P1(0) : P1(0));
+    wsetscrreg(win, top, bot - 1);
 ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
