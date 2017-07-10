@@ -10,6 +10,8 @@
 .Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
 .Op Fl b Ar COLOR
+.Op Fl s Ar FILE
+.Op Fl S Ar INTERVAL
 .Sh DESCRIPTION
 .Nm
 is a terminal multiplexer,
@@ -63,14 +65,15 @@ or
 .Po
 the default
 .Pc "."
+.It Fl s Ar FILE
+Specify a status file.
+See
+.Sx "The Status File"
+below.
+.It Fl S Ar INTERVAL
+Specify an interval in seconds.
+The status file will be checked this often.
 .El
-.Pp
-The
-.Fl u
-and
-.Fl m
-flags are recognized but ignored,
-for backwards compatibility.
 .Pp
 .Ss Usage
 .Nm
@@ -109,6 +112,23 @@ can be changed at compile time and therefore may be different for this installat
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
+.Ss The Status File
+If
+.Nm
+has been given the name of a status file
+.Po
+via the
+.Fl s
+option
+.Pc ","
+it will periodically check the contents of this file.
+The first one hundred bytes in this file will be displayed in the status bar
+before any window title.
+.Pp
+This is useful for displaying continually-updated information.
+For example,
+a simple script could be written to loop and update the status area with the
+current time and date, laptop battery power, etc.
 .Ss The Value of Fl t
 The terminal name passed to
 .Fl t
@@ -137,6 +157,15 @@ It is widely supported and its description is installed by default on most syste
 The only user-visible difference when using this terminal name is that programs will
 not necessarily know how to change cursor visibility.
 .El
+.Ss The mtm Environment
+.Nm
+sets the
+.Ev MTM
+environment variable to its process ID
+.Po
+see
+.Xr getpid 2
+.Pc "."
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"

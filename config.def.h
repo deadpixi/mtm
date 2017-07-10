@@ -5,6 +5,9 @@
  * character (OK).
  */
 
+/* How often to check for status updates by default. */
+#define STATUSINTERVAL 60
+
 /* The default command prefix key, when modified by cntrl.
  * This can be changed at runtime using the '-c' flag.
  */

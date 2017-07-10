@@ -88,8 +88,9 @@ this is `g`.
 
 The `-b` flag lets you specify the background color for the status bar.
 
-mtm also recognizes but ignores the `-u` and `-u` flags, for backwards
-compatibility with older versions.
+The `-s` flag names a status file, and the `-S` flag indicates how often this
+file should be checked. The contents of this file will be displayed in the
+left side status bar, before any window title.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
 mtm lets you split up the terminal into multiple virtual terminals.

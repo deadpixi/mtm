@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <wctype.h>
 
@@ -35,7 +36,8 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY] [-b COLOR]"
+#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY] [-b COLOR]\n" \
+              "           [-s FILE] [-S INTERVAL]"
 
 /*** DATA TYPES */
 typedef enum{
@@ -69,9 +71,11 @@ static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
-static char iobuf[BUFSIZ + 1];
+static char iobuf[BUFSIZ + 1], status[MAXTITLE + 1] = "mtm", *statusfile;
 static WINDOW *titlewin;
 static short titlecolor = COLOR_WHITE;
+static time_t statustimer = 0;
+static int statusinterval = STATUSINTERVAL;
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -80,6 +84,7 @@ static void reshapechildren(NODE *n);
 static const char *term = "eterm-color";
 static void freenode(NODE *n, bool recursive);
 static void updatetitle(void);
+static void updatestatus(void);
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -482,6 +487,27 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
+updatestatus(void) /* update the status portion of the title bar */
+{
+    char buf[MAXTITLE + 1] = {0};
+
+    if (statusfile && time(NULL) > statustimer){
+        FILE *f = fopen(statusfile, "r");
+        if (!f)
+            return;
+
+        if (fread(buf, 1, MAXTITLE, f) == 0)
+            strncpy(buf, "mtm", MAXTITLE);
+
+        strncpy(status, buf, MAXTITLE);
+        fclose(f);
+        statustimer = time(NULL) + statusinterval;
+        updatetitle();
+    }
+}
+
+
+static void
 updatetitle(void) /* update the current title */
 {
     short fg = titlecolor == COLOR_BLACK? COLOR_WHITE : COLOR_BLACK;
@@ -489,7 +515,9 @@ updatetitle(void) /* update the current title */
     wbkgd(titlewin, ' ' | COLOR_PAIR(getpair(fg, titlecolor)));
     wclear(titlewin);
     wattrset(titlewin, COLOR_PAIR(getpair(fg, titlecolor)));
-    mvwaddwstr(titlewin, 0, 0, focused->title);
+    mvwaddstr(titlewin, 0, 0, status);
+    waddwstr(titlewin, L" | ");
+    waddwstr(titlewin, focused->title);
     wrefresh(titlewin);
 }
 
@@ -531,10 +559,13 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     if (pid < 0)
         return freenode(n, false), NULL;
     else if (pid == 0){
+        char buf[100] = {0};
+        snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
         setsid();
+        setenv("MTM", buf, 1);
         setenv("TERM", term, 1);
-        setenv("MTM", "true", 1);
         signal(SIGCHLD, SIG_DFL);
+        signal(SIGUSR1, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
     }
@@ -788,14 +819,17 @@ run(void) /* Run MTM. */
 {
     while (root){
         wint_t w = 0;
+        struct timeval tv = {statusinterval, 0};
         fd_set sfds = fds;
-        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
+        if (select(nfds + 1, &sfds, NULL, NULL, &tv) < 0)
             FD_ZERO(&sfds);
 
         int r = wget_wch(focused->win, &w);
         while (handlechar(r, w))
             r = wget_wch(focused->win, &w);
         getinput(root, &sfds);
+
+        updatestatus();
 
         doupdate();
         fixcursor();
@@ -808,6 +842,7 @@ doripoff(WINDOW *w, int i)
     (void)i;
     titlewin = w;
 
+    scrollok(titlewin, FALSE);
     werase(w);
     wrefresh(w);
 
@@ -834,16 +869,20 @@ main(int argc, char **argv)
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
+
     int c = 0;
-    while ((c = getopt(argc, argv, "mub:T:t:c:")) != -1) switch (c){
+    while ((c = getopt(argc, argv, "s:S:b:T:t:c:")) != -1) switch (c){
         case 'c': commandkey = CTL(optarg[0]);      break;
         case 'T': setenv("TERM", optarg, 1);        break;
         case 't': term = optarg;                    break;
         case 'b': titlecolor = nametocolor(optarg); break;
-        case 'u': /* ignored */                     break;
-        case 'm': /* ignored */                     break;
+        case 's': statusfile = optarg;              break;
+        case 'S': statusinterval = atoi(optarg);    break;
         default:  quit(EXIT_FAILURE, USAGE);        break;
     }
+
+    if (statusinterval <= 0)
+        return fprintf(stderr, "invalid status interval"), EXIT_FAILURE;
 
     ripoffline(1, doripoff);
     initscr();
