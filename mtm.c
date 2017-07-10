@@ -144,6 +144,7 @@ getshell(void) /* Get the user's preferred shell. */
  *      PD(n, d)       - Parameter n, with default d.
  *      P0(n)          - Parameter n, default 0.
  *      P1(n)          - Parameter n, default 1.
+ *      CALL(h)        - Call handler h with no arguments.
  *      SENDN(n, s, c) - Write string c bytes of s to n.
  *      SEND(n, s)     - Write string s to node n's host.
  *      (END)HANDLER   - Declare/end a handler function
@@ -158,6 +159,7 @@ getshell(void) /* Get the user's preferred shell. */
 #define PD(x, d) (argc < (x) || !argv? (d) : argv[(x)])
 #define P0(x) PD(x, 0)
 #define P1(x) (!P0(x)? 1 : P0(x))
+#define CALL(x) (x)(v, n, 0, 0, 0, NULL, NULL);
 #define SENDN(n, s, c) safewrite(n->pt, s, c)
 #define SEND(n, s) SENDN(n, s, strlen(s))
 #define COMMONVARS                                                  \
@@ -288,7 +290,7 @@ ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
     if (wsetscrreg(win, P1(0) - 1, PD(1, my) - 1) == OK)
-        cup(v, p, L'H', 0, 0, NULL, NULL);
+        CALL(cup);
 ENDHANDLER
 
 HANDLER(mode) /* Set or Reset Mode */
@@ -307,7 +309,7 @@ ENDHANDLER
 
 HANDLER(ris) /* RIS - Reset to Initial State */
     swprintf(n->title, MAXTITLE, L"%s", getshell());
-    sgr0(v, p, 0, 0, 0, NULL, NULL);
+    CALL(sgr0);
     wclear(win);
     wmove(win, 0, 0);
     n->vis = 1;
@@ -319,10 +321,10 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
     bool doc = false;
 
     if (!argc)
-        sgr0(v, p, 0, 0, 0, NULL, NULL);
+        CALL(sgr0);
 
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: sgr0(v, p, 0, 0, 0, NULL, NULL);   break;
+        case  0: CALL(sgr0);                        break;
         case  1: wattron(win,  A_BOLD);             break;
         case  3: wattron(win,  A_ITALIC);           break;
         case  4: wattron(win,  A_UNDERLINE);        break;
@@ -378,12 +380,12 @@ HANDLER(print) /* Print a character to the terminal */
         return;
 
     if (n->insert)
-        ich(v, p, L'@', 0, 0, NULL, NULL);
+        CALL(ich);
 
     if (n->xenl){
         n->xenl = false;
-        cr(v, p, w, 0, 0, NULL, NULL);
-        ind(v, p, w, 0, 0, NULL, NULL);
+        CALL(cr);
+        CALL(ind);
         getyx(win, y, x);
     }
 
