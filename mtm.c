@@ -44,11 +44,11 @@ typedef enum{
     HORIZONTAL,
     VERTICAL,
     VIEW
-} node_t;
+} Node;
 
 typedef struct NODE NODE;
 struct NODE{
-    node_t t;
+    Node t;
     NODE *p, *c1, *c2;
     int y, x, sy, sx, h, w, pt, vis;
     short fg, bg, sfg, sbg, sp;
@@ -451,7 +451,7 @@ setupevents(NODE *n)
  * tree, updating the display, and so on.
  */
 static NODE *
-newnode(node_t t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
+newnode(Node t, NODE *p, int y, int x, int h, int w) /* Create a new node. */
 {
     NODE *n = calloc(1, sizeof(NODE));
     if (!n || h < 2 || w < 2)
@@ -577,7 +577,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 }
 
 static NODE *
-newcontainer(node_t t, NODE *p, int y, int x, int h, int w,
+newcontainer(Node t, NODE *p, int y, int x, int h, int w,
              NODE *c1, NODE *c2) /* Create a new container */
 {
     NODE *n = newnode(t, p, y, x, h, w);
@@ -733,7 +733,7 @@ draw(NODE *n) /* Draw a node. */
 }
 
 static void
-split(NODE *n, node_t t) /* Split a node. */
+split(NODE *n, Node t) /* Split a node. */
 {
     int nh = t == VERTICAL?   (n->h - 1) / 2 : n->h;
     int nw = t == HORIZONTAL? (n->w) / 2 : n->w;
