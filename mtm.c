@@ -374,11 +374,6 @@ HANDLER(osc) /* OSC - Operating System Command */
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
-    cchar_t r;
-    attr_t a = A_NORMAL;
-    short cp = 0;
-    wchar_t s[] = {w, 0};
-
     if (wcwidth(w) < 0)
         return;
 
@@ -392,12 +387,11 @@ HANDLER(print) /* Print a character to the terminal */
         getyx(win, y, x);
     }
 
-    wattr_get(win, &a, &cp, NULL);
-    setcchar(&r, s, a, cp, NULL);
-    wadd_wchnstr(win, &r, 1);
-
-    if (wmove(win, y, x + wcwidth(w)) == ERR)
+    if (x == mx - wcwidth(w)){
         n->xenl = true;
+        wins_nwstr(win, &w, 1);
+    } else
+        waddnwstr(win, &w, 1);
 
     wnoutrefresh(win);
 ENDHANDLER
