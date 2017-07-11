@@ -565,7 +565,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
         setenv("MTM", buf, 1);
         setenv("TERM", term, 1);
         signal(SIGCHLD, SIG_DFL);
-        signal(SIGUSR1, SIG_DFL);
         execl(getshell(), getshell(), NULL);
         return NULL;
     }
