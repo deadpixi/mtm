@@ -7,6 +7,11 @@
  * KEY_CODE_YES).
  */
 
+/* Old versions of ncurses don't support A_ITALIC.
+ * Define this to disable it if the situation isn't automatically detected.
+#define NO_ITALICS
+ */
+
 /* How often to check for status updates by default. */
 #define STATUSINTERVAL 60
 
