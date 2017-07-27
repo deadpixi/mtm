@@ -737,8 +737,8 @@ draw(NODE *n) /* Draw a node. */
 static void
 split(NODE *n, Node t) /* Split a node. */
 {
-    int nh = t == VERTICAL?   (n->h - 1) / 2 : n->h;
-    int nw = t == HORIZONTAL? (n->w) / 2 : n->w;
+    int nh = t == HORIZONTAL?   (n->h - 1) / 2 : n->h;
+    int nw = t == VERTICAL? (n->w) / 2 : n->w;
     NODE *p = n->p;
     NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v)
