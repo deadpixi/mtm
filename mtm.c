@@ -93,7 +93,8 @@ quit(int rc, const char *m) /* Shut down MTM. */
 {
     if (m)
         fprintf(stderr, "%s\n", m);
-    freenode(root, true);
+    if (root)
+        freenode(root, true);
     endwin();
     exit(rc);
 }
@@ -559,9 +560,11 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     ris(&n->vp, n, L'c', 0, 0, NULL, NULL);
 
     pid_t pid = forkpty(&n->pt, NULL, NULL, &ws);
-    if (pid < 0)
+    if (pid < 0){
+        if (!p)
+            perror("forkpty");
         return freenode(n, false), NULL;
-    else if (pid == 0){
+    } else if (pid == 0){
         char buf[100] = {0};
         snprintf(buf, sizeof(buf) - 1, "%lu", (unsigned long)getppid());
         setsid();
@@ -888,7 +891,7 @@ main(int argc, char **argv)
     }
 
     if (statusinterval <= 0)
-        return fprintf(stderr, "invalid status interval"), EXIT_FAILURE;
+        quit(EXIT_FAILURE, "invalid status interval");
 
     ripoffline(1, doripoff);
     initscr();
@@ -899,7 +902,10 @@ main(int argc, char **argv)
     start_color();
     use_default_colors();
 
-    focus(root = newview(NULL, 0, 0, LINES, COLS));
+    root = newview(NULL, 0, 0, LINES, COLS);
+    if (!root)
+        quit(EXIT_FAILURE, "could not open root window");
+    focus(root);
     draw(root);
     run();
 
