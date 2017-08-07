@@ -23,4 +23,4 @@ install-terminfo: mtm.ti
 	tic -s -x mtm.ti
 
 clean:
-	rm -f *.o mtm
+	rm -f *.o mtm config.h
