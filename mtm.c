@@ -894,7 +894,9 @@ main(int argc, char **argv)
         quit(EXIT_FAILURE, "invalid status interval");
 
     ripoffline(1, doripoff);
-    initscr();
+    if (!initscr())
+        quit(EXIT_FAILURE, "could not initialize terminal");
+
     raw();
     noecho();
     nonl();
