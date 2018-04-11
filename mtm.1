@@ -9,9 +9,7 @@
 .Op Fl T Ar HOST
 .Op Fl t Ar TERMINAL
 .Op Fl c Ar CHARACTER
-.Op Fl b Ar COLOR
-.Op Fl s Ar FILE
-.Op Fl S Ar INTERVAL
+.Op Fl s
 .Sh DESCRIPTION
 .Nm
 is a terminal multiplexer,
@@ -49,30 +47,13 @@ in combination with the
 key.
 By default this is
 .Dq "g" "."
-.It Fl b Ar COLOR
-Set the title bar color to
-.Ar COLOR ","
-which may be one of
-.Li BLACK ","
-.Li RED ","
-.Li GREEN ","
-.Li YELLOW ","
-.Li BLUE ","
-.Li MAGENTA ","
-.Li CYAN ","
-or
-.Li WHITE
-.Po
-the default
-.Pc "."
-.It Fl s Ar FILE
-Specify a status file.
-See
-.Sx "The Status File"
-below.
-.It Fl S Ar INTERVAL
-Specify an interval in seconds.
-The status file will be checked this often.
+.It Fl s
+Indicate that the host terminal supports
+.Xr xterm 1
+style title setting.
+Normally,
+.Nm
+will detect this automatically.
 .El
 .Pp
 .Ss Usage
@@ -112,23 +93,6 @@ can be changed at compile time and therefore may be different for this installat
 .Pp
 .Nm
 will exit when its last virtual terminal is closed.
-.Ss The Status File
-If
-.Nm
-has been given the name of a status file
-.Po
-via the
-.Fl s
-option
-.Pc ","
-it will periodically check the contents of this file.
-The first one hundred bytes in this file will be displayed in the status bar
-before any window title.
-.Pp
-This is useful for displaying continually-updated information.
-For example,
-a simple script could be written to loop and update the status area with the
-current time and date, laptop battery power, etc.
 .Ss The Value of Fl t
 The terminal name passed to
 .Fl t

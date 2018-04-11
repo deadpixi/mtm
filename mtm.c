@@ -25,7 +25,6 @@
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 #include <wctype.h>
 
@@ -37,8 +36,7 @@
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY] [-b COLOR]\n" \
-              "           [-s FILE] [-S INTERVAL]"
+#define USAGE "usage: mtm [-s] [-T NAME] [-t NAME] [-c KEY]\n"
 
 /*** DATA TYPES */
 typedef enum{
@@ -72,11 +70,8 @@ static COLORTABLE ctable[MAXCTABLE];
 static NODE *root, *focused;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
-static char iobuf[BUFSIZ + 1], status[MAXTITLE + 1] = "mtm", *statusfile;
-static WINDOW *titlewin;
-static short titlecolor = COLOR_WHITE;
-static time_t statustimer = 0;
-static int statusinterval = STATUSINTERVAL;
+static char iobuf[BUFSIZ + 1];
+static bool dostatus = false;
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -85,7 +80,6 @@ static void reshapechildren(NODE *n);
 static const char *term = "eterm-color";
 static void freenode(NODE *n, bool recursive);
 static void updatetitle(void);
-static void updatestatus(void);
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -491,38 +485,13 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
-updatestatus(void) /* update the status portion of the title bar */
-{
-    char buf[MAXTITLE + 1] = {0};
-
-    if (statusfile && time(NULL) > statustimer){
-        FILE *f = fopen(statusfile, "r");
-        if (!f)
-            return;
-
-        if (fread(buf, 1, MAXTITLE, f) == 0)
-            strncpy(buf, "mtm", MAXTITLE);
-
-        strncpy(status, buf, MAXTITLE);
-        fclose(f);
-        statustimer = time(NULL) + statusinterval;
-        updatetitle();
-    }
-}
-
-
-static void
 updatetitle(void) /* update the current title */
 {
-    short fg = titlecolor == COLOR_BLACK? COLOR_WHITE : COLOR_BLACK;
-
-    wbkgd(titlewin, ' ' | COLOR_PAIR(getpair(fg, titlecolor)));
-    wclear(titlewin);
-    wattrset(titlewin, COLOR_PAIR(getpair(fg, titlecolor)));
-    mvwaddstr(titlewin, 0, 0, status);
-    waddwstr(titlewin, L" | ");
-    waddwstr(titlewin, focused->title);
-    wrefresh(titlewin);
+    if (dostatus){
+        char title[MAXTITLE + 1] = {0};
+        snprintf(title, MAXTITLE, "\033]0;%ls\a", focused->title);
+        putp(title);
+    }
 }
 
 static void
@@ -680,7 +649,6 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     wmove(n->win, oy, ox);
     wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
-    SEND(n, "\x0c");
 }
 
 static void
@@ -829,9 +797,8 @@ run(void) /* Run MTM. */
 {
     while (root){
         wint_t w = 0;
-        struct timeval tv = {statusinterval, 0};
         fd_set sfds = fds;
-        if (select(nfds + 1, &sfds, NULL, NULL, &tv) < 0)
+        if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
             FD_ZERO(&sfds);
 
         int r = wget_wch(focused->win, &w);
@@ -839,38 +806,9 @@ run(void) /* Run MTM. */
             r = wget_wch(focused->win, &w);
         getinput(root, &sfds);
 
-        updatestatus();
-
         doupdate();
         fixcursor();
     }
-}
-
-int
-doripoff(WINDOW *w, int i)
-{
-    (void)i;
-    titlewin = w;
-
-    scrollok(titlewin, FALSE);
-    werase(w);
-    wrefresh(w);
-
-    return 0;
-}
-
-static short
-nametocolor(const char *c)
-{
-    if      (strcmp(c, "black")   == 0) return COLOR_BLACK;
-    else if (strcmp(c, "red")     == 0) return COLOR_RED;
-    else if (strcmp(c, "green")   == 0) return COLOR_GREEN;
-    else if (strcmp(c, "yellow")  == 0) return COLOR_YELLOW;
-    else if (strcmp(c, "blue")    == 0) return COLOR_BLUE;
-    else if (strcmp(c, "magenta") == 0) return COLOR_MAGENTA;
-    else if (strcmp(c, "cyan")    == 0) return COLOR_CYAN;
-    else if (strcmp(c, "white")   == 0) return COLOR_WHITE;
-    return fprintf(stderr, "invalid color\n"), exit(EXIT_FAILURE), -1;
 }
 
 int
@@ -881,20 +819,14 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
 
     int c = 0;
-    while ((c = getopt(argc, argv, "s:S:b:T:t:c:")) != -1) switch (c){
+    while ((c = getopt(argc, argv, "c:T:t:x")) != -1) switch (c){
         case 'c': commandkey = CTL(optarg[0]);      break;
         case 'T': setenv("TERM", optarg, 1);        break;
         case 't': term = optarg;                    break;
-        case 'b': titlecolor = nametocolor(optarg); break;
-        case 's': statusfile = optarg;              break;
-        case 'S': statusinterval = atoi(optarg);    break;
+        case 'x': dostatus = true;                  break;
         default:  quit(EXIT_FAILURE, USAGE);        break;
     }
 
-    if (statusinterval <= 0)
-        quit(EXIT_FAILURE, "invalid status interval");
-
-    ripoffline(1, doripoff);
     if (!initscr())
         quit(EXIT_FAILURE, "could not initialize terminal");
 
@@ -904,6 +836,7 @@ main(int argc, char **argv)
     intrflush(stdscr, FALSE);
     start_color();
     use_default_colors();
+    dostatus = (bool)tigetflag("XT") || dostatus;
 
     root = newview(NULL, 0, 0, LINES, COLS);
     if (!root)
