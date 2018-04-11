@@ -489,8 +489,10 @@ static void
 updatetitle(void) /* update the current title - XXX this is remarkbly inefficient */
 {
     if (dostatus && wcsncmp(title, focused->title, MAXTITLE) != 0){
-        endwin();
-        printf("\033]0;%ls\007", focused->title);
+        char newtitle[MAXTITLE + 1] = {0};
+        snprintf(newtitle, MAXTITLE, "\033]0;%ls\007", focused->title);
+        doupdate();
+        putp(newtitle);
         fflush(stdout);
         refresh();
         wcsncpy(title, focused->title, MAXTITLE);
