@@ -680,6 +680,7 @@ reshapeview(NODE *n, int y, int x, int h, int w) /* Reshape a view. */
     wmove(n->win, oy, ox);
     wnoutrefresh(n->win);
     ioctl(n->pt, TIOCSWINSZ, &ws);
+    SEND(n, "\x0c");
 }
 
 static void
@@ -814,7 +815,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  HSPLIT,              split(focused, HORIZONTAL))
     DO(true,  VSPLIT,              split(focused, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(focused))
-    DO(true,  REDRAW,              draw(root))
+    DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
 
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0)

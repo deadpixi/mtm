@@ -30,12 +30,6 @@
 
 /**** DATA TYPES */
 #define MAXACTIONS  25
-typedef struct ACTION ACTION;
-struct ACTION{
-    wchar_t lo, hi;
-    void (*cb)(VTPARSER *p, wchar_t w);
-    STATE *next;
-};
 
 struct STATE{
     void (*entry)(VTPARSER *v);
@@ -138,28 +132,29 @@ handlechar(VTPARSER *vp, wchar_t w)
     }
 }
 
-static inline wchar_t
-getmbchar(VTPARSER *vp, char c)
-{
-    wchar_t w = 0;
-    mbstate_t ts = vp->ms;
-
-    vp->mb[vp->nmb++] = c;
-    switch (mbrtowc(&w, vp->mb, vp->nmb, &ts)){
-        case (size_t)-1: vp->nmb = 0; return L'?';
-        case (size_t)-2:              return 0;
-    }
-
-    return vp->nmb = 0, vp->ms = ts, w;
-}
-
 void
 vtparser_write(VTPARSER *vp, const char *s, size_t n)
 {
-    for (size_t i = 0; i < n; i++){
-        wchar_t w = getmbchar(vp, s[i]);
-        if (w)
-            handlechar(vp, w);
+    wchar_t w = 0;
+    while (n){
+        size_t r = mbrtowc(&w, s, n, &vp->ms);
+        switch (r){
+            case -2: /* incomplete character, try again */
+                return;
+
+            case -1: /* invalid character, skip it */
+                w = VTPARSER_BAD_CHAR;
+                r = 1;
+                break;
+
+            case 0: /* literal zero, write it but advance */
+                r = 1;
+                break;
+        }
+
+        n -= r;
+        s += r;
+        handlechar(vp, w);
     }
 }
 

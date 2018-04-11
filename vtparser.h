@@ -27,7 +27,7 @@
 #ifndef VTC_H
 #define VTC_H
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <wchar.h>
 
 /**** CONFIGURATION */
@@ -39,22 +39,29 @@
     #endif
 #endif
 
+/**** DATA TYPES */
 #define MAXPARAM    16
 #define MAXCALLBACK 128
 #define MAXOSC      100
 #define MAXBUF      100
 
-/**** DATA TYPES */
 typedef struct VTPARSER VTPARSER;
 typedef struct STATE STATE;
+typedef struct ACTION ACTION;
+
+struct ACTION{
+    wchar_t lo, hi;
+    void (*cb)(VTPARSER *p, wchar_t w);
+    STATE *next;
+};
+
 typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
                            int argc, int *argv, const wchar_t *osc);
 
 struct VTPARSER{
     STATE *s;
-    int narg, nosc, args[MAXPARAM], inter, nmb, oscbuf[MAXOSC + 1];
+    int narg, nosc, args[MAXPARAM], inter, oscbuf[MAXOSC + 1];
     mbstate_t ms;
-    char mb[MAXBUF + 1];
     void *p;
     VTCALLBACK print, osc, cons[MAXCALLBACK], escs[MAXCALLBACK],
                csis[MAXCALLBACK];
