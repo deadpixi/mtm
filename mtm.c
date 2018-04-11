@@ -72,6 +72,7 @@ static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
 static bool dostatus = false;
+static wchar_t title[MAXTITLE + 1];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -485,12 +486,14 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
-updatetitle(void) /* update the current title */
+updatetitle(void) /* update the current title - XXX this is remarkbly inefficient */
 {
-    if (dostatus){
-        char title[MAXTITLE + 1] = {0};
-        snprintf(title, MAXTITLE, "\033]0;%ls\a", focused->title);
-        putp(title);
+    if (dostatus && wcsncmp(title, focused->title, MAXTITLE) != 0){
+        endwin();
+        printf("\033]0;%ls\007", focused->title);
+        fflush(stdout);
+        refresh();
+        wcsncpy(title, focused->title, MAXTITLE);
     }
 }
 
@@ -677,9 +680,6 @@ reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
         reshapeview(n, y, x, h, w);
     else
         reshapechildren(n);
-
-    if (n == root)
-        updatetitle();
 
     draw(n);
     wnoutrefresh(n->win);
