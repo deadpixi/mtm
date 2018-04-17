@@ -527,8 +527,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
     idlok(n->win, TRUE);
     keypad(n->win, TRUE);
 
-    if (!vtparser_init(&n->vp, n))
-        return freenode(n, false), NULL;
     setupevents(n);
 
     ris(&n->vp, n, L'c', 0, 0, NULL, NULL);

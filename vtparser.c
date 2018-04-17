@@ -94,15 +94,6 @@ DO(print,   v->print, v->print, 0, NULL)
 DO(osc,     v->osc, v->osc, 0, NULL)
 
 /**** PUBLIC FUNCTIONS */
-bool
-vtparser_init(VTPARSER *v, void *p)
-{
-    v->s = &ground;
-    v->p = p;
-
-    return v;
-}
-
 VTCALLBACK
 vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
 {
@@ -121,6 +112,7 @@ vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
 static void
 handlechar(VTPARSER *vp, wchar_t w)
 {
+    vp->s = vp->s? vp->s : &ground;
     for (ACTION *a = vp->s->actions; a->cb; a++) if (w >= a->lo && w <= a->hi){
         a->cb(vp, w);
         if (a->next){
