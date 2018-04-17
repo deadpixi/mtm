@@ -179,8 +179,7 @@ getshell(void) /* Get the user's preferred shell. */
     static void                                         \
     name (VTPARSER *v, void *p, wchar_t w, wchar_t iw,  \
           int argc, int *argv, const wchar_t *osc)      \
-    {                                                   \
-        COMMONVARS
+    { COMMONVARS
 #define ENDHANDLER }
 
 HANDLER(bell) /* Terminal bell. */
