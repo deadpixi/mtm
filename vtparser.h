@@ -77,9 +77,9 @@ typedef enum{
 
 /**** FUNCTIONS */
 VTCALLBACK
-vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
+vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb);
 
 void
-vtparser_write(VTPARSER *vp, const char *s, size_t n);
+vtwrite(VTPARSER *vp, const char *s, size_t n);
 
 #endif

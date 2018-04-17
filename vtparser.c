@@ -95,7 +95,7 @@ DO(osc,     v->osc, v->osc, 0, NULL)
 
 /**** PUBLIC FUNCTIONS */
 VTCALLBACK
-vtparser_onevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
+vtonevent(VTPARSER *vp, VtEvent t, wchar_t w, VTCALLBACK cb)
 {
     VTCALLBACK o = NULL;
     if (w < MAXCALLBACK) switch (t){
@@ -125,7 +125,7 @@ handlechar(VTPARSER *vp, wchar_t w)
 }
 
 void
-vtparser_write(VTPARSER *vp, const char *s, size_t n)
+vtwrite(VTPARSER *vp, const char *s, size_t n)
 {
     wchar_t w = 0;
     while (n){
