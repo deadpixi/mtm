@@ -410,6 +410,7 @@ ENDHANDLER
 static void
 setupevents(NODE *n)
 {
+    n->vp.p = n;
     vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x05, ack);
     vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x07, bell);
     vtparser_onevent(&n->vp, VTPARSER_CONTROL, 0x08, cub);
