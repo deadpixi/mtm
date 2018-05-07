@@ -1,0 +1,7 @@
+config.h
+
+*~
+*.swp
+
+*.o
+mtm
