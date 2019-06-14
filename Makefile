@@ -1,5 +1,5 @@
 CC        ?= gcc
-CFLAGS    ?= -O3 -std=c99 -Wall -Wextra -pedantic
+CFLAGS    ?= -Os -std=c99 -Wall -Wextra -pedantic
 FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
 HEADERS   ?=
 LIBPATH   ?=
