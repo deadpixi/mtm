@@ -68,7 +68,7 @@ struct COLORTABLE{
 
 /*** GLOBALS AND PROTOTYPES */
 static COLORTABLE ctable[MAXCTABLE];
-static NODE *root, *focused;
+static NODE *root, *focused, *lastfocused = NULL;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
@@ -575,6 +575,7 @@ focus(NODE *n) /* Focus a node. */
     if (!n)
         return;
     else if (n->t == VIEW){
+        lastfocused = focused;
         focused = n;
         updatetitle();
         wnoutrefresh(n->win);
@@ -780,6 +781,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  MOVE_DOWN,           focus(findnode(root, BELOW(focused))))
     DO(true,  MOVE_LEFT,           focus(findnode(root, LEFT(focused))))
     DO(true,  MOVE_RIGHT,          focus(findnode(root, RIGHT(focused))))
+    DO(true,  MOVE_OTHER,          focus(lastfocused))
     DO(true,  HSPLIT,              split(focused, HORIZONTAL))
     DO(true,  VSPLIT,              split(focused, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(focused))
