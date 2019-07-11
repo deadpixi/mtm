@@ -472,6 +472,8 @@ static void
 freenode(NODE *n, bool recurse) /* Free a node. */
 {
     if (n){
+        if (lastfocused == n)
+            lastfocused = NULL;
         if (n->win)
             delwin(n->win);
         if (recurse)
