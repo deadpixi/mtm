@@ -4,6 +4,7 @@ FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTEN
 HEADERS   ?=
 LIBPATH   ?=
 DESTDIR   ?= /usr/local
+MANPATH   ?= $(DESTDIR)/man/man1
 CURSESLIB ?= ncursesw
 LIBS      ?= -l$(CURSESLIB) -lutil
 
@@ -17,7 +18,7 @@ config.h: config.def.h
 
 install: mtm
 	cp mtm $(DESTDIR)/bin
-	cp mtm.1 $(DESTDIR)/share/man/man1
+	cp mtm.1 $(MANPATH)
 
 install-terminfo: mtm.ti
 	tic -s -x mtm.ti
