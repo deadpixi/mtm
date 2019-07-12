@@ -74,7 +74,7 @@ Usage
 
 Usage is simple::
 
-    mtm [-T NAME] [-t NAME] [-c KEY] [-b COLOR]
+    mtm [-T NAME] [-t NAME] [-c KEY]
 
 The `-T` flag tells mtm to assume a different kind of host terminal.
 
@@ -85,12 +85,6 @@ simply controls what the `TERM` environment variable is set to.
 The `-c` flag lets you specify a keyboard character to use as the "command
 prefix" for mtm when modified with *control* (see below).  By default,
 this is `g`.
-
-The `-b` flag lets you specify the background color for the status bar.
-
-The `-s` flag names a status file, and the `-S` flag indicates how often this
-file should be checked. The contents of this file will be displayed in the
-left side status bar, before any window title.
 
 Once inside mtm, things pretty much work like any other terminal.  However,
 mtm lets you split up the terminal into multiple virtual terminals.
@@ -172,7 +166,7 @@ mtm terminfo entry installed.
 Copyright and License
 =====================
 
-Copyright 2017 Rob King <jking@deadpixi.com>
+Copyright 2019 Rob King <jking@deadpixi.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

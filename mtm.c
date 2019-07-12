@@ -1,4 +1,4 @@
-/* Copyright 2017 Rob King <jking@deadpixi.com>
+/* Copyright 2017 - 2019 Rob King <jking@deadpixi.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

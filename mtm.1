@@ -7,9 +7,8 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl T Ar HOST
-.Op Fl t Ar TERMINAL
+.Op Fl T Ar HOST
 .Op Fl c Ar CHARACTER
-.Op Fl s
 .Sh DESCRIPTION
 .Nm
 is a terminal multiplexer,
@@ -32,7 +31,7 @@ By default,
 the contents of the
 .Ev TERM
 environment variable are used.
-.It Fl t Ar TERMINAL
+.It Fl t Ar TERM
 Set the
 .Ev TERM
 environment variable within the mtm session to
@@ -47,30 +46,6 @@ in combination with the
 key.
 By default this is
 .Dq "g" "."
-.It Fl b Ar COLOR
-Set the title bar color to
-.Ar COLOR ","
-which may be one of
-.Li black ","
-.Li red ","
-.Li green ","
-.Li yellow ","
-.Li blue ","
-.Li magenta ","
-.Li cyan ","
-or
-.Li white
-.Po
-the default
-.Pc "."
-.It Fl s Ar FILE
-Specify a status file.
-See
-.Sx "The Status File"
-below.
-.It Fl S Ar INTERVAL
-Specify an interval in seconds.
-The status file will be checked this often.
 .El
 .Pp
 .Ss Usage
