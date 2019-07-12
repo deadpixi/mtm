@@ -33,11 +33,10 @@
 #include "vtparser.h"
 
 #define MAXCTABLE 72
-#define MAXTITLE 100
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 #define CTL(x) ((x) & 0x1f)
-#define USAGE "usage: mtm [-s] [-T NAME] [-t NAME] [-c KEY]\n"
+#define USAGE "usage: mtm [-T NAME] [-t NAME] [-c KEY]\n"
 
 /*** DATA TYPES */
 typedef enum{
@@ -53,7 +52,6 @@ struct NODE{
     int y, x, sy, sx, h, w, pt, vis;
     short fg, bg, sfg, sbg, sp;
     bool insert, oxenl, xenl;
-    wchar_t title[MAXTITLE + 1];
     attr_t sattr;
     WINDOW *win;
     VTPARSER vp;
@@ -72,8 +70,6 @@ static NODE *root, *focused, *lastfocused = NULL;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
 static char iobuf[BUFSIZ + 1];
-static bool dostatus = false;
-static wchar_t title[MAXTITLE + 1];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -81,7 +77,6 @@ static void draw(NODE *n);
 static void reshapechildren(NODE *n);
 static const char *term = "eterm-color";
 static void freenode(NODE *n, bool recursive);
-static void updatetitle(void);
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -310,7 +305,6 @@ HANDLER(sgr0) /* Reset SGR to default */
 ENDHANDLER
 
 HANDLER(ris) /* RIS - Reset to Initial State */
-    swprintf(n->title, MAXTITLE, L"%s", getshell());
     CALL(sgr0);
     wclear(win);
     wmove(win, 0, 0);
@@ -369,14 +363,6 @@ ENDHANDLER
 
 HANDLER(ind) /* IND - Index */
     y == bot - 1? scroll(win) : wmove(win, y + 1, x);
-ENDHANDLER
-
-HANDLER(osc) /* OSC - Operating System Command */
-    if (wcslen(osc) >= 2 && osc[1] == L';'){
-        wcsncpy(n->title, osc + 2, MAXTITLE - 1);
-        if (n == focused)
-            updatetitle();
-    }
 ENDHANDLER
 
 HANDLER(print) /* Print a character to the terminal */
@@ -443,7 +429,6 @@ setupevents(NODE *n)
     vtonevent(&n->vp, VTPARSER_ESCAPE,  L'M', ri);
     vtonevent(&n->vp, VTPARSER_ESCAPE,  L'c', ris);
     vtonevent(&n->vp, VTPARSER_PRINT,   0,    print);
-    vtonevent(&n->vp, VTPARSER_OSC,     0,    osc);
 }
 
 /*** MTM FUNCTIONS
@@ -485,20 +470,6 @@ freenode(NODE *n, bool recurse) /* Free a node. */
             FD_CLR(n->pt, &fds);
         }
         free(n);
-    }
-}
-
-static void
-updatetitle(void) /* update the current title - XXX this is remarkbly inefficient */
-{
-    if (dostatus && wcsncmp(title, focused->title, MAXTITLE) != 0){
-        char newtitle[MAXTITLE + 1] = {0};
-        snprintf(newtitle, MAXTITLE, "\033]0;%ls\007", focused->title);
-        doupdate();
-        putp(newtitle);
-        fflush(stdout);
-        refresh();
-        wcsncpy(title, focused->title, MAXTITLE);
     }
 }
 
@@ -579,7 +550,6 @@ focus(NODE *n) /* Focus a node. */
     else if (n->t == VIEW){
         lastfocused = focused;
         focused = n;
-        updatetitle();
         wnoutrefresh(n->win);
     } else
         focus(n->c1? n->c1 : n->c2);
@@ -823,11 +793,10 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
 
     int c = 0;
-    while ((c = getopt(argc, argv, "c:T:t:x")) != -1) switch (c){
+    while ((c = getopt(argc, argv, "c:T:t:")) != -1) switch (c){
         case 'c': commandkey = CTL(optarg[0]);      break;
         case 'T': setenv("TERM", optarg, 1);        break;
         case 't': term = optarg;                    break;
-        case 'x': dostatus = true;                  break;
         default:  quit(EXIT_FAILURE, USAGE);        break;
     }
 
@@ -840,7 +809,6 @@ main(int argc, char **argv)
     intrflush(stdscr, FALSE);
     start_color();
     use_default_colors();
-    dostatus = (bool)tigetflag("XT") || dostatus;
 
     root = newview(NULL, 0, 0, LINES, COLS);
     if (!root)
