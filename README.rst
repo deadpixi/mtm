@@ -6,8 +6,8 @@ mtm is the Micro Terminal Multiplexer, a terminal multiplexer.
 It has four major features/princples:
 
 Simplicity
-    There are three commands (change focus, split, close).  There are no
-    modes, no dozens of commands, no crazy feature list.
+    There are only a few commands, two of which are hardly ever used.
+    There are no modes, no dozens of commands, no crazy feature list.
 
 Compatibility
     mtm emulates a classic ANSI text terminal.  That means it should
@@ -27,17 +27,6 @@ Stability
     - Translation improvements.
     - Accessibility improvements.
     - Fixes to keep it working on modern OSes.
-
-The Full-Featured Release
-=========================
-mtm has always been designed to be small and minimalist.  For a while
-there, I was adding feature upon feature, just for the fun of it, but
-that defeated the purpose.
-
-To see mtm in all its fully-featured glory, check out the `full-featured`
-tag.  That version is no longer supported, but if there are features
-that that you absolutely have to have, open a bug and I'll pull them back
-into master.
 
 Community
 =========
@@ -100,6 +89,9 @@ Up/Down/Left/Right Arrow
     Focus the virtual terminal above/below/to the left of/to the right of
     the currently focused terminal.
 
+o
+    Focus the previously-focused virtual terminal.
+
 h / v
     Split the focused virtual terminal in half horizontally/vertically,
     creating a new virtual terminal to the right/below.  The new virtual
@@ -114,8 +106,14 @@ w
 l
     Redraw the screen.
 
+PgUp/PgDown/End
+    Scroll the screen back/forward half a screenful, or recenter the
+    screen on the actual terminal.
+
 That's it.  There aren't dozens of commands, there are no modes, there's
 nothing else to learn.
+
+(Note that these keybindings can be changed at compile time.)
 
 Screenshots
 -----------
@@ -129,27 +127,43 @@ Compatibility
 just work out-of-the-box for you, thanks to the efforts of the various
 hackers over the years to make terminal-independence a reality.)
 
-By default, mtm advertises itself as an `eterm-color`
-terminal.  This is the terminal emulated by the Emacs `AnsiTerm
-<https://www.emacswiki.org/emacs/AnsiTerm>`_ package.  The terminfo
-definition for this terminal has been in the common terminfo database for
-years, and is widely deployed, meaning it's probably already on your system.
+By default, mtm advertises itself as a `screen` terminal.  This is what `GNU
+screen` and `tmux` advertise themselves as, and is a well-known terminal
+type that has been in the default terminfo database for decades.
 
 (Note that this should not be taken to imply that anyone involved in the
-`AnsiTerm` project endorses or otherwise has anything to do with mtm,
-and vice-versa. Their work is excellent, though, and you should definitely
-check it out.)
+`GNU screen` or `tmux` projects endorses or otherwise has anything to do
+with mtm, and vice-versa. Their work is excellent, though, and you should
+definitely check it out.)
 
-The `mtm` Terminal Type
------------------------
+The `mtm` Terminal Types
+------------------------
 mtm comes with a terminfo description file called mtm.ti.  This file
-describes all of the features supported by mtm, including such features
-as toggling the visibility of the cursor.
+describes all of the features supported by mtm.
 
 If you want to install this terminal type, use the `tic` compiler that
 comes with ncurses::
 
     tic -s -x mtm.ti
+
+or simply::
+
+    make install-terminfo
+
+This will install the following terminal types:
+
+mtm
+    This terminal type supports all of the features of mtm, but with
+    the default 8 "ANSI" colors only.
+
+mtm-256color
+    These terminal types specify different numbers of available colors.
+    Note that mtm is not magic and cannot actually display more colors
+    than the host terminal supports.
+
+mtm-noutf
+    This terminal type supports everything the mtm terminal type does,
+    but does not advertise UTF8 capability.
 
 That command will compile and install the terminfo entry.  After doing so,
 calling mtm with `-t mtm`::
@@ -157,16 +171,19 @@ calling mtm with `-t mtm`::
     mtm -t mtm
 
 will instruct programs to use that terminfo entry.
+You can, of course, replace `mtm` with any of the other above terminal
+types.
 
-Using this terminfo entry allows programs to use the full power of mtm's
+Using these terminfo entries allows programs to use the full power of mtm's
 terminal emulation, but it is entirely optional. A primary design goal
 of mtm was for it to be completely usable on systems that didn't have the
-mtm terminfo entry installed.
+mtm terminfo entry installed. By default, mtm advertises itself as the
+widely-available `screen` terminal type.
 
 Copyright and License
 =====================
 
-Copyright 2019 Rob King <jking@deadpixi.com>
+Copyright 2016-2019 Rob King <jking@deadpixi.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

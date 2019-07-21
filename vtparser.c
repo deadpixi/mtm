@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Rob King
+/* Copyright (c) 2017-2019 Rob King
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -91,7 +91,7 @@ DO(control, w < MAXCALLBACK && v->cons[w], v->cons[w], 0, NULL)
 DO(escape,  w < MAXCALLBACK && v->escs[w], v->escs[w], v->inter > 0, &v->inter)
 DO(csi,     w < MAXCALLBACK && v->csis[w], v->csis[w], v->narg, v->args)
 DO(print,   v->print, v->print, 0, NULL)
-DO(osc,     v->osc, v->osc, 0, NULL)
+DO(osc,     v->osc, v->osc, v->nosc, NULL)
 
 /**** PUBLIC FUNCTIONS */
 VTCALLBACK
@@ -151,11 +151,8 @@ vtwrite(VTPARSER *vp, const char *s, size_t n)
 }
 
 /**** STATE DEFINITIONS
- * This is based on Paul Flo Williams's amazing work, though much reduced.
- * Paul's state machine handles every VTxxx terminal from the 200 to the 525,
- * which is far more than we need. As a result, I've stripped out
- * everything that wouldn't be applicable to a stock VT100 in 1978.
- * For more information, see http://vt100.net/emu/dec_ansi_parser
+ * This was built by consulting the excellent state chart created by
+ * Paul Flow Williams: http://vt100.net/emu/dec_ansi_parser
  * Please note that Williams does not (AFAIK) endorse this work.
  */
 #define MAKESTATE(name, onentry, ...)         \
@@ -182,15 +179,20 @@ MAKESTATE(ground, NULL,
 );
 
 MAKESTATE(escape, reset,
+    {0x21, 0x21, ignore,   &osc_string},
     {0x20, 0x2f, collect,  &escape_intermediate},
     {0x30, 0x4f, doescape, &ground},
     {0x51, 0x57, doescape, &ground},
     {0x59, 0x59, doescape, &ground},
     {0x5a, 0x5a, doescape, &ground},
     {0x5c, 0x5c, doescape, &ground},
+    {0x6b, 0x6b, ignore,   &osc_string},
     {0x60, 0x7e, doescape, &ground},
     {0x5b, 0x5b, ignore,   &csi_entry},
-    {0x5d, 0x5d, ignore,   &osc_string}
+    {0x5d, 0x5d, ignore,   &osc_string},
+    {0x5e, 0x5e, ignore,   &osc_string},
+    {0x50, 0x50, ignore,   &osc_string},
+    {0x5f, 0x5f, ignore,   &osc_string}
 );
 
 MAKESTATE(escape_intermediate, NULL,

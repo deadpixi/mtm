@@ -37,7 +37,14 @@ Set the
 environment variable within the mtm session to
 .Ar TERM "."
 By default, this is
-.Em "eterm-color" "."
+.Em "screen" ","
+or
+.Em "screen-256color"
+if
+.Nm
+detects that the host terminal supports 256 colors.
+Note that this default can be changed at compile time,
+and thus may differ in your installation.
 .It Fl c Ar CHARACTER
 Commands are prefixed using
 .Ar CHARACTER
@@ -46,6 +53,8 @@ in combination with the
 key.
 By default this is
 .Dq "g" "."
+Note that this default can be changed at compile time,
+and thus may differ in your installation.
 .El
 .Pp
 .Ss Usage
@@ -65,10 +74,13 @@ when prefixed with the command character:
 .Bl -tag -width Ds
 .It Em "Up/Down/Right/Left Arrow"
 Select the terminal above/below/to the right of/to the left of the currently focused one.
+.It Em "o"
+.Pq "the letter oh"
+Switch to the last-focused terminal.
 .It Em "h" "or" "v"
-Split the focused terminal in half horizontally
+Split the focused terminal in half and stack horizontally
 .Pq "for 'h'"
-or vertically
+or stack vertically
 .Pq "for 'v'" ";"
 the newly-created terminal will be focused.
 .It Em "w"
@@ -76,11 +88,20 @@ Delete the currently focused terminal.
 .It Em "l"
 .Pq "the letter ell"
 Redraw the screen.
+.It Em "PgUp/PgDown/End"
+Scroll the terminal up/down/to the bottom.
+By default,
+.Nm
+stores up to 1000 lines of scrolling history.
+Note that if the screen is currently scrolled back
+.Pq "that is, the scrollback buffer is not at the bottom"
+these keys need not be prefixed with the command key.
+.Nm
+will also scroll to the bottom on user input.
 .El
 .Pp
-Note that these command keys,
-and the default prefix,
-can be changed at compile time and therefore may be different for this installation of
+Note that these command keys can be changed at compile time,
+and therefore may be different for this installation of
 .Nm "."
 .Pp
 .Nm
@@ -103,15 +124,33 @@ This is the terminal described by the
 description that shipped with
 .Nm "."
 It is not necessarily installed on your system,
-but if it is, it will tell programs how to use all of the
+but if it is, it will tell
+.Xr terminfo 5
+-aware programs how to use all of the
 .Nm
-features,
-including cursor visibility changes.
-.It eterm-color
+features.
+Note that there aren't any user-visible features added here,
+but
+.Nm
+supports some extra cursor-movement commands,
+and thus using this terminal type where available may result in slightly
+speedier screen updates.
+.It mtm-256color
+This is the same as the
+.Nm
+terminal type, but advertising 256-color support.
+This can be used if the
+.Nm
+.Xr terminfo 5
+description is installed and the host terminal supports 256 or more colors.
+.It screen
 This is the default.
 It is widely supported and its description is installed by default on most systems.
-The only user-visible difference when using this terminal name is that programs will
-not necessarily know how to change cursor visibility.
+This is a good choice if the
+.Nm
+.Xr terminfo 5
+description is not installed everywhere you expect to use
+.Nm mtm "."
 .El
 .Ss The mtm Environment
 .Nm
@@ -122,6 +161,10 @@ environment variable to its process ID
 see
 .Xr getpid 2
 .Pc "."
+Programs can test for the presence of this variable to determine if they are
+running inside of a
+.Nm
+instance.
 .Sh ENVIRONMENT
 The following environment variables affect the operation of
 .Nm mtm ":"

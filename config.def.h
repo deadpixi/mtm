@@ -1,19 +1,35 @@
-/* The following definitions change the keys used to send commands
- * to mtm. In all cases, the value must be something that ncurses's
- * get_wch(3) function could return.
- * The values should be wrapped in * KEY(x) for regular keys
- * (i.e. for those which get_wch(3) would return OK), and CODE(x)
- * for special keys (i.e. those for which get_wch(3) would return
- * KEY_CODE_YES).
- */
-
 /* Old versions of ncurses don't support A_ITALIC.
  * Define this to disable it if the situation isn't automatically detected.
 #define NO_ITALICS
  */
 
-/* How often to check for status updates by default. */
-#define STATUSINTERVAL 60
+/* mtm by default will advertise itself as a "screen" terminal.
+ * This is the terminal type advertised by such programs as
+ * screen(1) and tmux(1) and is a widely-supported terminal type.
+ * mtm supports emulating the "screen" terminal very well, and this
+ * is a reasonable default.
+ *
+ * However, you can change the default terminal that mtm will
+ * advertise itself as. There's the "mtm" terminal type that is
+ * recommended for use if you know it will be available in all the
+ * environments in which mtm will be used. It advertises a few
+ * features that mtm has that the default "screen" terminfo doesn't
+ * list, meaning that terminfo-aware programs may get a small
+ * speed boost.
+ */
+#define DEFAULT_TERMINAL "screen"
+
+/* mtm supports a scrollback buffer, allowing users to scroll back
+ * through the output history of a virtual terminal. The SCROLLBACK
+ * knob controls how many lines are saved (minus however many are
+ * currently displayed). 1000 seems like a good number.
+ *
+ * Note that every virtual terminal is sized to be at least this big,
+ * so setting a huge number here might waste memory. It is recommended
+ * that this number be at least as large as the largest terminal you
+ * expect to use is tall.
+ */
+#define SCROLLBACK 1000
 
 /* The default command prefix key, when modified by cntrl.
  * This can be changed at runtime using the '-c' flag.
@@ -37,9 +53,14 @@
 /* The force redraw key. */
 #define REDRAW KEY(L'l')
 
+/* The scrollback keys. */
+#define SCROLLUP CODE(KEY_PPAGE)
+#define SCROLLDOWN CODE(KEY_NPAGE)
+#define RECENTER CODE(KEY_END)
+
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
-    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux__))
+    #if defined(__APPLE__) || !defined(__linux__) || defined(__FreeBSD__)
         #define NCURSESW_INCLUDE_H <curses.h>
     #else
         #define NCURSESW_INCLUDE_H <ncursesw/curses.h>
@@ -49,10 +70,125 @@
 
 /* Includes needed to make forkpty(3) work. */
 #ifndef FORKPTY_INCLUDE_H
-    #if defined(__APPLE__) || (defined(BSD) && !defined(__linux__))
+    #if defined(__APPLE__)
         #define FORKPTY_INCLUDE_H <util.h>
+    #elif defined(__FreeBSD__)
+        #define FORKPTY_INCLUDE_H <libutil.h>
     #else
         #define FORKPTY_INCLUDE_H <pty.h>
     #endif
 #endif
 #include FORKPTY_INCLUDE_H
+
+/* You probably don't need to alter these much, but if you do,
+ * here is where you can define alternate character sets.
+ * The maps must end with {WEOF, WEOF}.
+ *
+ * Note that if your system's wide-character implementation
+ * maps directly to Unicode, the preferred Unicode characters
+ * will be used automatically if your system declares such
+ * support. If it doesn't declare it, define WCHAR_IS_UNICODE to
+ * force Unicode to be used.
+ */
+CHARMAP CSET_US[] ={ /* "USASCII"...really just the null table */
+    {WEOF, WEOF}
+};
+
+#if defined(__STDC_ISO_10646__) || defined(WCHAR_IS_UNICODE)
+CHARMAP CSET_UK[] ={ /* "United Kingdom"...really just Pound Sterling */
+    {L'#', 0x00a3},
+    {WEOF, WEOF}
+};
+
+CHARMAP CSET_GRAPH[] ={ /* Graphics Set One */
+    {L'-', 0x2191},
+    {L'}', 0x00a3},
+    {L'~', 0x00b7},
+    {L'{', 0x03c0},
+    {L',', 0x2190},
+    {L'+', 0x2192},
+    {L'.', 0x2193},
+    {L'|', 0x2260},
+    {L'>', 0x2265},
+    {L'`', 0x25c6},
+    {L'a', 0x2592},
+    {L'b', L'\t'},
+    {L'c', L'\f'},
+    {L'd', L'\r'},
+    {L'e', L'\n'},
+    {L'f', 0x00b0},
+    {L'g', 0x00b1},
+    {L'h', 0x2592},
+    {L'i', 0x2603},
+    {L'j', 0x2518},
+    {L'k', 0x2510},
+    {L'l', 0x250c},
+    {L'm', 0x2514},
+    {L'n', 0x253c},
+    {L'o', 0x23ba},
+    {L'p', 0x23bb},
+    {L'q', 0x2500},
+    {L'r', 0x23bc},
+    {L's', 0x23bd},
+    {L't', 0x251c},
+    {L'u', 0x2524},
+    {L'v', 0x2534},
+    {L'w', 0x252c},
+    {L'x', 0x2502},
+    {L'y', 0x2264},
+    {L'z', 0x2265},
+    {L'_', L' '},
+    {L'0', 0x25ae},
+    {WEOF, WEOF}
+};
+
+#else /* wchar_t doesn't map to Unicode... */
+
+CHARMAP CSET_UK[] ={ /* "United Kingdom"...really just Pound Sterling */
+    {L'#', L'&'},
+    {WEOF, WEOF}
+};
+
+CHARMAP CSET_GRAPH[] ={ /* Graphics Set One */
+    {L'-', '^'},
+    {L'}', L'&'},
+    {L'~', L'o'},
+    {L'{', L'p'},
+    {L',', L'<'},
+    {L'+', L'>'},
+    {L'.', L'v'},
+    {L'|', L'!'},
+    {L'>', L'>'},
+    {L'`', L'+'},
+    {L'a', L':'},
+    {L'b', L'\t'},
+    {L'c', L'\f'},
+    {L'd', L'\r'},
+    {L'e', L'\n'},
+    {L'f', L'\''},
+    {L'g', L'#'},
+    {L'h', L'#'},
+    {L'i', L'i'},
+    {L'j', L'+'},
+    {L'k', L'+'},
+    {L'l', L'+'},
+    {L'm', L'+'},
+    {L'n', '+'},
+    {L'o', L'-'},
+    {L'p', L'-'},
+    {L'q', L'-'},
+    {L'r', L'-'},
+    {L's', L'_'},
+    {L't', L'+'},
+    {L'u', L'+'},
+    {L'v', L'+'},
+    {L'w', L'+'},
+    {L'x', L'|'},
+    {L'y', L'<'},
+    {L'z', L'>'},
+    {L'_', L' '},
+    {L'0', L'#'},
+    {WEOF, WEOF}
+};
+
+#endif
