@@ -157,7 +157,6 @@ mtm
     the default 8 "ANSI" colors only.
 
 mtm-256color
-    These terminal types specify different numbers of available colors.
     Note that mtm is not magic and cannot actually display more colors
     than the host terminal supports.
 
