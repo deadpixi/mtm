@@ -728,7 +728,7 @@ getterm(void)
     const char *envterm = getenv("TERM");
     if (term)
         return term;
-    if (envterm && strstr(envterm, "-256color") && !strstr(DEFAULT_TERMINAL, "-256color"))
+    if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
         return DEFAULT_TERMINAL "-256color";
     return DEFAULT_TERMINAL;
 }
