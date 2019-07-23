@@ -22,10 +22,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
-#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
@@ -70,15 +69,13 @@ struct NODE{
     SCRN pri, alt, *s;
     CHARMAP *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
-    wchar_t title[100];
 };
 
 /*** GLOBALS AND PROTOTYPES */
 static NODE *root, *focused, *lastfocused = NULL;
-static int commandkey = CTL(COMMAND_KEY), nfds = 1, statusfd = -1;
+static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
-static char iobuf[BUFSIZ + 1], statusmsg[MAXOSC + 1], statuspath[FILENAME_MAX + 1];
-static WINDOW *statusline;
+static char iobuf[BUFSIZ + 1];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -86,7 +83,6 @@ static void draw(NODE *n);
 static void reshapechildren(NODE *n);
 static const char *term = NULL;
 static void freenode(NODE *n, bool recursive);
-static void updatestatus(void);
 
 /*** UTILITY FUNCTIONS */
 static void
@@ -366,12 +362,11 @@ HANDLER(dsr) /* DSR - Device Status Report */
     SEND(n, buf);
 ENDHANDLER
 
-HANDLER(idl) /* IL or DL - Insert/Delete Line */
-    /* insdelln inserts lines above, not below, so we scroll instead */
-    int otop = 0, obot = 0;
+HANDLER(idl) /* IL or DL - Insert/Delete Line respecting the scroll region */
+    int otop = 0, obot = 0, p1 = P1(0);
     wgetscrreg(win, &otop, &obot);
-    wsetscrreg(win, py, obot);
-    wscrl(win, w == L'L'? -P1(0) : P1(0));
+    p1 = MIN(p1, obot - otop + 1);
+    wscrl(win, w == L'L'? -p1 : p1);
     wsetscrreg(win, otop, obot);
 ENDHANDLER
 
@@ -574,12 +569,6 @@ HANDLER(so) /* Switch Out/In Character Set */
     }
 ENDHANDLER
 
-HANDLER(osc) /* OSC - Operating System Command (title set) */
-    if (wcsncmp(osc, L"0;", 2) != 0)
-        return;
-    swprintf(n->title, MAXOSC, L"%ls", osc + 2);
-ENDHANDLER
-
 static void
 setupevents(NODE *n)
 {
@@ -644,7 +633,6 @@ setupevents(NODE *n)
     vtonevent(&n->vp, VTPARSER_ESCAPE,  L'p', vis);
     vtonevent(&n->vp, VTPARSER_ESCAPE,  L'=', numkp);
     vtonevent(&n->vp, VTPARSER_ESCAPE,  L'>', numkp);
-    vtonevent(&n->vp, VTPARSER_OSC,     0,    osc);
     vtonevent(&n->vp, VTPARSER_PRINT,   0,    print);
 }
 
@@ -774,7 +762,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 
     FD_SET(n->pt, &fds);
     fcntl(n->pt, F_SETFL, O_NONBLOCK);
-    nfds = MAX(n->pt, nfds);
+    nfds = n->pt > nfds? n->pt : nfds;
     return n;
 }
 
@@ -804,7 +792,6 @@ focus(NODE *n) /* Focus a node. */
         focused = n;
         pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x,
                      n->y + n->h - 1, n->x + n->w - 1);
-        updatestatus();
     } else
         focus(n->c1? n->c1 : n->c2);
 }
@@ -974,12 +961,6 @@ split(NODE *n, Node t) /* Split a node. */
 static bool
 getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
 {
-    if (n == root && statusfd >= 0 && FD_ISSET(statusfd, f)){
-        memset(statusmsg, 0, MAXOSC);
-        read(statusfd, statusmsg, MAXOSC);
-        updatestatus();
-    }
-
     if (n && n->c1 && !getinput(n->c1, f))
         return false;
 
@@ -1098,8 +1079,6 @@ run(void) /* Run MTM. */
     while (root){
         wint_t w = 0;
         fd_set sfds = fds;
-        if (statusfd >= 0)
-            FD_SET(statusfd, &sfds);
         if (select(nfds + 1, &sfds, NULL, NULL, NULL) < 0)
             FD_ZERO(&sfds);
 
@@ -1109,50 +1088,9 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         doupdate();
-        updatestatus();
         fixcursor();
         doupdate();
     }
-}
-
-static void
-deletestatus(void)
-{
-    if (statuspath[0])
-        unlink(statuspath);
-}
-
-static int
-initstatus(WINDOW *win, int w)
-{
-    (void)w;
-    statusline = win;
-
-    if (getenv("HOME")){
-        snprintf(statuspath, FILENAME_MAX, "%s/.mtm.%ld", getenv("HOME"), (long)getpid());
-        if (mkfifo(statuspath, 0600) == 0 && (statusfd = open(statuspath, O_RDONLY | O_NONBLOCK)) >= 0)
-            nfds = MAX(nfds, statusfd);
-        atexit(deletestatus);
-    }
-    return OK;
-}
-
-static void
-setupstatus(void)
-{
-    wbkgdset(statusline, COLOR_PAIR(alloc_pair(COLOR_BLACK, COLOR_GREEN)) | ' ');
-    werase(statusline);
-    wrefresh(statusline);
-}
-
-static void
-updatestatus(void)
-{
-    wchar_t buf[COLS];
-    werase(statusline);
-    swprintf(buf, sizeof(buf) - 1, L"%s | %ls", statusmsg, focused? focused->title : L"");
-    waddwstr(statusline, buf);
-    wrefresh(statusline);
 }
 
 int
@@ -1163,17 +1101,13 @@ main(int argc, char **argv)
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
 
     int c = 0;
-    bool dostatus = false;
-    while ((c = getopt(argc, argv, "sc:T:t:")) != -1) switch (c){
+    while ((c = getopt(argc, argv, "c:T:t:")) != -1) switch (c){
         case 'c': commandkey = CTL(optarg[0]);      break;
         case 'T': setenv("TERM", optarg, 1);        break;
         case 't': term = optarg;                    break;
-        case 's': dostatus = true;                  break;
         default:  quit(EXIT_FAILURE, USAGE);        break;
     }
 
-    if (dostatus)
-        ripoffline(-1, initstatus);
     if (!initscr())
         quit(EXIT_FAILURE, "could not initialize terminal");
     raw();
@@ -1183,8 +1117,6 @@ main(int argc, char **argv)
     start_color();
     use_default_colors();
 
-    if (dostatus)
-        setupstatus();
     root = newview(NULL, 0, 0, LINES, COLS);
     if (!root)
         quit(EXIT_FAILURE, "could not open root window");
