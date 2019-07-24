@@ -398,7 +398,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     n->decom = s->insert = s->oxenl = s->xenl = n->lnm = false;
     CALL(cls);
     n->am = n->pnm = true;
-    s->vis = 1;
+    n->pri.vis = n->alt.vis = 1;
     n->s = &n->pri;
     wsetscrreg(n->pri.win, 0, MAX(SCROLLBACK, n->h) - 1);
     wsetscrreg(n->alt.win, 0, n->h - 1);
