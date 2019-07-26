@@ -485,10 +485,8 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         case 23:  wattroff(win, A_ITALIC);                                    break;
         #endif
     }
-    if (doc){
-        s->fg = fg; s->bg = bg;
-        wcolor_set(win, alloc_pair(s->fg, s->bg), NULL);
-    }
+    if (doc)
+        wcolor_set(win, alloc_pair(s->fg = fg, s->bg = bg), NULL);
 }
 
 HANDLER(cr) /* CR - Carriage Return */
