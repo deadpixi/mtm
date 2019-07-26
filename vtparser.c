@@ -152,7 +152,7 @@ vtwrite(VTPARSER *vp, const char *s, size_t n)
 
 /**** STATE DEFINITIONS
  * This was built by consulting the excellent state chart created by
- * Paul Flow Williams: http://vt100.net/emu/dec_ansi_parser
+ * Paul Flo Williams: http://vt100.net/emu/dec_ansi_parser
  * Please note that Williams does not (AFAIK) endorse this work.
  */
 #define MAKESTATE(name, onentry, ...)         \
