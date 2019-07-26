@@ -427,49 +427,68 @@ HANDLER(mode) /* Set or Reset Mode */
 ENDHANDLER
 
 HANDLER(sgr) /* SGR - Select Graphic Rendition */
-    bool doc = false;
+    bool doc = false, do8 = COLORS >= 8, do16 = COLORS >= 16, do256 = COLORS >= 256;
     if (!argc)
         CALL(sgr0);
 
+    short bg = 0, fg = 0;
     for (int i = 0; i < argc; i++) switch (P0(i)){
-        case  0: CALL(sgr0);                                                break;
-        case  1: wattron(win,  A_BOLD);                                     break;
-        case  2: wattron(win,  A_DIM);                                      break;
-        case  4: wattron(win,  A_UNDERLINE);                                break;
-        case  5: wattron(win,  A_BLINK);                                    break;
-        case  7: wattron(win,  A_REVERSE);                                  break;
-        case  8: wattron(win,  A_INVIS);                                    break;
-        case 22: wattroff(win, A_DIM); wattroff(win, A_BOLD);               break;
-        case 24: wattroff(win, A_UNDERLINE);                                break;
-        case 25: wattroff(win, A_BLINK);                                    break;
-        case 27: wattroff(win, A_REVERSE);                                  break;
-        case 30: s->fg = COLOR_BLACK;                           doc = true; break;
-        case 31: s->fg = COLOR_RED;                             doc = true; break;
-        case 32: s->fg = COLOR_GREEN;                           doc = true; break;
-        case 33: s->fg = COLOR_YELLOW;                          doc = true; break;
-        case 34: s->fg = COLOR_BLUE;                            doc = true; break;
-        case 35: s->fg = COLOR_MAGENTA;                         doc = true; break;
-        case 36: s->fg = COLOR_CYAN;                            doc = true; break;
-        case 37: s->fg = COLOR_WHITE;                           doc = true; break;
-        case 38: s->fg = P0(i+1) == 5? P0(i+2) : s->fg; i += 2; doc = true; break;
-        case 39: s->fg = -1;                                    doc = true; break;
-        case 40: s->bg = COLOR_BLACK;                           doc = true; break;
-        case 41: s->bg = COLOR_RED;                             doc = true; break;
-        case 42: s->bg = COLOR_GREEN;                           doc = true; break;
-        case 43: s->bg = COLOR_YELLOW;                          doc = true; break;
-        case 44: s->bg = COLOR_BLUE;                            doc = true; break;
-        case 45: s->bg = COLOR_MAGENTA;                         doc = true; break;
-        case 46: s->bg = COLOR_CYAN;                            doc = true; break;
-        case 47: s->bg = COLOR_WHITE;                           doc = true; break;
-        case 48: s->bg = P0(i+1) == 5? P0(i+2) : s->bg; i += 2; doc = true; break;
-        case 49: s->bg = -1;                                    doc = true; break;
-        #if defined(A_ITALIC) && !defined(NO_ITALICS)
-        case  3: wattron(win,  A_ITALIC);                                   break;
-        case 23: wattroff(win, A_ITALIC);                                   break;
+        case  0:  CALL(sgr0);                                                 break;
+        case  1:  wattron(win,  A_BOLD);                                      break;
+        case  2:  wattron(win,  A_DIM);                                       break;
+        case  4:  wattron(win,  A_UNDERLINE);                                 break;
+        case  5:  wattron(win,  A_BLINK);                                     break;
+        case  7:  wattron(win,  A_REVERSE);                                   break;
+        case  8:  wattron(win,  A_INVIS);                                     break;
+        case 22:  wattroff(win, A_DIM); wattroff(win, A_BOLD);                break;
+        case 24:  wattroff(win, A_UNDERLINE);                                 break;
+        case 25:  wattroff(win, A_BLINK);                                     break;
+        case 27:  wattroff(win, A_REVERSE);                                   break;
+        case 30:  fg = COLOR_BLACK;                              doc = do8;   break;
+        case 31:  fg = COLOR_RED;                                doc = do8;   break;
+        case 32:  fg = COLOR_GREEN;                              doc = do8;   break;
+        case 33:  fg = COLOR_YELLOW;                             doc = do8;   break;
+        case 34:  fg = COLOR_BLUE;                               doc = do8;   break;
+        case 35:  fg = COLOR_MAGENTA;                            doc = do8;   break;
+        case 36:  fg = COLOR_CYAN;                               doc = do8;   break;
+        case 37:  fg = COLOR_WHITE;                              doc = do8;   break;
+        case 38:  fg = P0(i+1) == 5? P0(i+2) : s->fg; i += 2;    doc = do256; break;
+        case 39:  fg = -1;                                       doc = true;  break;
+        case 40:  bg = COLOR_BLACK;                              doc = do8;   break;
+        case 41:  bg = COLOR_RED;                                doc = do8;   break;
+        case 42:  bg = COLOR_GREEN;                              doc = do8;   break;
+        case 43:  bg = COLOR_YELLOW;                             doc = do8;   break;
+        case 44:  bg = COLOR_BLUE;                               doc = do8;   break;
+        case 45:  bg = COLOR_MAGENTA;                            doc = do8;   break;
+        case 46:  bg = COLOR_CYAN;                               doc = do8;   break;
+        case 47:  bg = COLOR_WHITE;                              doc = do8;   break;
+        case 48:  bg = P0(i+1) == 5? P0(i+2) : s->bg; i += 2;    doc = do256; break;
+        case 49:  bg = -1;                                       doc = true;  break;
+        case 90:  fg = COLOR_BLACK;                              doc = do16;  break;
+        case 91:  fg = COLOR_RED;                                doc = do16;  break;
+        case 92:  fg = COLOR_GREEN;                              doc = do16;  break;
+        case 93:  fg = COLOR_YELLOW;                             doc = do16;  break;
+        case 94:  fg = COLOR_BLUE;                               doc = do16;  break;
+        case 95:  fg = COLOR_MAGENTA;                            doc = do16;  break;
+        case 96:  fg = COLOR_CYAN;                               doc = do16;  break;
+        case 97:  fg = COLOR_WHITE;                              doc = do16;  break;
+        case 100: bg = COLOR_BLACK;                              doc = do16;  break;
+        case 101: bg = COLOR_RED;                                doc = do16;  break;
+        case 102: bg = COLOR_GREEN;                              doc = do16;  break;
+        case 103: bg = COLOR_YELLOW;                             doc = do16;  break;
+        case 104: bg = COLOR_BLUE;                               doc = do16;  break;
+        case 105: bg = COLOR_MAGENTA;                            doc = do16;  break;
+        case 106: bg = COLOR_CYAN;                               doc = do16;  break;
+        case 107: bg = COLOR_WHITE;                              doc = do16;  break;
+        #if defined(A_ITALIC) && !defined(NO_ITALICS )
+        case  3:  wattron(win,  A_ITALIC);                                    break;
+        case 23:  wattroff(win, A_ITALIC);                                    break;
         #endif
     }
-    if (doc)
+    if (doc){
+        s->fg = fg; s->bg = bg;
         wcolor_set(win, alloc_pair(s->fg, s->bg), NULL);
+    }
 }
 
 HANDLER(cr) /* CR - Carriage Return */
@@ -524,8 +543,6 @@ HANDLER(print) /* Print a character to the terminal */
     } else
         waddnwstr(win, &w, 1);
     n->gc = n->gs;
-
-    pnoutrefresh(win, s->off, 0, n->y, n->x, n->y + n->h - 1, n->x + n->w - 1);
 } /* no ENDHANDLER because we don't want to reset repc */
 
 HANDLER(rep) /* REP - Repeat Character */
@@ -696,6 +713,18 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
+refreshchildren(NODE *n)
+{
+    if (n->t == VIEW)
+        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x,
+                     n->y + n->h - 1, n->x + n->w - 1);
+    if (n->c1)
+        refreshchildren(n->c1);
+    if (n->c2)
+        refreshchildren(n->c2);
+}
+
+static void
 fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused){
@@ -704,8 +733,7 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
         getyx(focused->s->win, y, x);
         y = MIN(MAX(y, focused->s->tos), focused->s->tos + focused->h - 1);
         wmove(focused->s->win, y, x);
-        pnoutrefresh(focused->s->win, focused->s->off, 0, focused->y, focused->x,
-                     focused->y + focused->h - 1, focused->x + focused->w - 1);
+        refreshchildren(focused);
         wmove(focused->s->win, y, x);
     }
 }
@@ -790,8 +818,6 @@ focus(NODE *n) /* Focus a node. */
     else if (n->t == VIEW){
         lastfocused = focused;
         focused = n;
-        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x,
-                     n->y + n->h - 1, n->x + n->w - 1);
     } else
         focus(n->c1? n->c1 : n->c2);
 }
@@ -875,7 +901,6 @@ reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
         wmove(n->s->win, oy + d, ox);
         wscrl(n->s->win, -d);
     }
-    prefresh(n->s->win, n->s->off, 0, n->y, n->x, n->y + n->h - 1, n->x + n->w - 1);
     doupdate();
     refresh();
     ioctl(n->pt, TIOCSWINSZ, &ws);
@@ -1087,6 +1112,7 @@ run(void) /* Run MTM. */
             r = wget_wch(focused->s->win, &w);
         getinput(root, &sfds);
 
+        refreshchildren(root);
         doupdate();
         fixcursor();
         doupdate();
