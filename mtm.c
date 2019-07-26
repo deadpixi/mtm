@@ -431,7 +431,7 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
     if (!argc)
         CALL(sgr0);
 
-    short bg = 0, fg = 0;
+    short bg = s->bg, fg = s->fg;
     for (int i = 0; i < argc; i++) switch (P0(i)){
         case  0:  CALL(sgr0);                                                 break;
         case  1:  wattron(win,  A_BOLD);                                      break;
