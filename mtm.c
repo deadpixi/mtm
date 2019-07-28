@@ -744,8 +744,6 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
         curs_set(focused->s->off != focused->s->tos? 0 : focused->s->vis);
         getyx(focused->s->win, y, x);
         y = MIN(MAX(y, focused->s->tos), focused->s->tos + focused->h - 1);
-        //wmove(focused->s->win, y, x); XXX
-        //refreshchildren(focused);
         wmove(focused->s->win, y, x);
     }
 }
@@ -1125,7 +1123,6 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         refreshchildren(root);
-        //doupdate(); XXX
         fixcursor();
         refreshchildren(focused);
         doupdate();
