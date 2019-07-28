@@ -238,6 +238,10 @@ HANDLER(hpa) /* HPA - Cursor Horizontal Absolute */
     wmove(win, py, MIN(P1(0) - 1, mx - 1));
 ENDHANDLER
 
+HANDLER(hpr) /* HPR - Cursor Horizontal Relative */
+    wmove(win, py, MIN(px + P1(0), mx - 1));
+ENDHANDLER
+
 HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
     wmove(win, MIN(tos + bot - 1, MAX(tos + top, tos + P1(0) - 1)), x);
 ENDHANDLER
@@ -624,6 +628,7 @@ setupevents(NODE *n)
     vtonevent(&n->vp, VTPARSER_CSI,     L'`', hpa);
     vtonevent(&n->vp, VTPARSER_CSI,     L'^', su);
     vtonevent(&n->vp, VTPARSER_CSI,     L'@', ich);
+    vtonevent(&n->vp, VTPARSER_CSI,     L'a', hpr);
     vtonevent(&n->vp, VTPARSER_CSI,     L'b', rep);
     vtonevent(&n->vp, VTPARSER_CSI,     L'c', decid);
     vtonevent(&n->vp, VTPARSER_CSI,     L'd', vpa);
