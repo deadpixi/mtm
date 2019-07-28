@@ -242,6 +242,10 @@ HANDLER(vpa) /* VPA - Cursor Vertical Absolute */
     wmove(win, MIN(tos + bot - 1, MAX(tos + top, tos + P1(0) - 1)), x);
 ENDHANDLER
 
+HANDLER(vpr) /* VPR - Cursor Vertical Relative */
+    wmove(win, MIN(tos + bot - 1, MAX(tos + top, py + P1(0))), x);
+ENDHANDLER
+
 HANDLER(cbt) /* CBT - Cursor Backwards Tab */
     for (int i = x - 1; i < n->ntabs && i >= 0; i--) if (n->tabs[i]){
         wmove(win, py, i);
@@ -623,6 +627,7 @@ setupevents(NODE *n)
     vtonevent(&n->vp, VTPARSER_CSI,     L'b', rep);
     vtonevent(&n->vp, VTPARSER_CSI,     L'c', decid);
     vtonevent(&n->vp, VTPARSER_CSI,     L'd', vpa);
+    vtonevent(&n->vp, VTPARSER_CSI,     L'e', vpr);
     vtonevent(&n->vp, VTPARSER_CSI,     L'f', cup);
     vtonevent(&n->vp, VTPARSER_CSI,     L'g', tbc);
     vtonevent(&n->vp, VTPARSER_CSI,     L'h', mode);
