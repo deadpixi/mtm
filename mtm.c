@@ -363,9 +363,10 @@ HANDLER(dsr) /* DSR - Device Status Report */
 ENDHANDLER
 
 HANDLER(idl) /* IL or DL - Insert/Delete Line respecting the scroll region */
+    /* insert/delete line has to respect the scrolling region */
     int otop = 0, obot = 0, p1 = P1(0);
     wgetscrreg(win, &otop, &obot);
-    p1 = MIN(p1, obot - otop + 1);
+    p1 = MIN(p1, obot - otop + 1); /* work around a potential bug in ncurses */
     wscrl(win, w == L'L'? -p1 : p1);
     wsetscrreg(win, otop, obot);
 ENDHANDLER
@@ -730,8 +731,8 @@ fixcursor(void) /* Move the terminal cursor to the active view. */
         curs_set(focused->s->off != focused->s->tos? 0 : focused->s->vis);
         getyx(focused->s->win, y, x);
         y = MIN(MAX(y, focused->s->tos), focused->s->tos + focused->h - 1);
-        wmove(focused->s->win, y, x);
-        refreshchildren(focused);
+        //wmove(focused->s->win, y, x); XXX
+        //refreshchildren(focused);
         wmove(focused->s->win, y, x);
     }
 }
@@ -1111,8 +1112,9 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         refreshchildren(root);
-        doupdate();
+        //doupdate(); XXX
         fixcursor();
+        refreshchildren(focused);
         doupdate();
     }
 }
