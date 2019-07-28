@@ -426,7 +426,10 @@ HANDLER(mode) /* Set or Reset Mode */
         case 20: n->lnm = set;              break;
         case 25: s->vis = set? 1 : 0;       break;
         case 34: s->vis = set? 1 : 2;       break;
-        case 47: case 1047: case 1049: if (set && n->s != &n->alt){
+        case 1048: CALL((set? sc : rc));    break;
+        case 1049:
+            CALL((set? sc : rc)); /* fall-through */
+        case 47: case 1047: if (set && n->s != &n->alt){
                 n->s = &n->alt;
                 CALL(cls);
             } else if (!set && n->s != &n->pri)
