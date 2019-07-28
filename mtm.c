@@ -1123,6 +1123,7 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         refreshchildren(root);
+        doupdate();
         fixcursor();
         refreshchildren(focused);
         doupdate();
