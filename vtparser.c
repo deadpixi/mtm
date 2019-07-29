@@ -32,7 +32,8 @@
 #define MAXACTIONS  128
 
 typedef struct ACTION ACTION;
-struct{
+struct ACTION{
+    wchar_t lo, hi;
     void (*cb)(VTPARSER *p, wchar_t w);
     STATE *next;
 };
