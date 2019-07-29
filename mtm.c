@@ -1105,6 +1105,7 @@ run(void) /* Run MTM. */
         getinput(root, &sfds);
 
         draw(root);
+        doupdate();
         fixcursor();
         draw(focused);
         doupdate();
