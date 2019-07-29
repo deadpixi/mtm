@@ -13,6 +13,11 @@ all: mtm
 mtm: vtparser.c mtm.c config.h
 	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) vtparser.c mtm.c $(LIBPATH) $(LIBS)
 
+vtparser.c: vttable.c
+
+vttable.c: tablegen
+	./tablegen > vttable.c
+
 config.h: config.def.h
 	cp -i config.def.h config.h
 
@@ -24,4 +29,4 @@ install-terminfo: mtm.ti
 	tic -s -x mtm.ti
 
 clean:
-	rm -f *.o mtm
+	rm -f *.o mtm vttable.c tablegen
