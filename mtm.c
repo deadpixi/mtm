@@ -537,8 +537,10 @@ HANDLER(print) /* Print a character to the terminal */
         y -= tos;
     }
 
-    w = (w < MAXMAP && n->gc[w])? n->gc[w] : w;
+    if (w < MAXMAP && n->gc[w])
+        w = n->gc[w];
     n->repc = w;
+
     if (x == mx - wcwidth(w)){
         s->xenl = true;
         wins_nwstr(win, &w, 1);
