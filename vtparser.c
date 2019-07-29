@@ -29,7 +29,13 @@
 #include "vtparser.h"
 
 /**** DATA TYPES */
-#define MAXACTIONS  25
+#define MAXACTIONS  128
+
+typedef struct ACTION ACTION;
+struct{
+    void (*cb)(VTPARSER *p, wchar_t w);
+    STATE *next;
+};
 
 struct STATE{
     void (*entry)(VTPARSER *v);

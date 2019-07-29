@@ -30,7 +30,10 @@
 #include <stddef.h>
 #include <wchar.h>
 
-/**** CONFIGURATION */
+/**** CONFIGURATION
+ * VTPARSER_BAD_CHAR is the character that will be displayed when
+ * an application sends an invalid multibyte sequence to the terminal.
+ */
 #ifndef VTPARSER_BAD_CHAR
     #ifdef __STDC_ISO_10646__
         #define VTPARSER_BAD_CHAR ((wchar_t)0xfffd)
@@ -47,14 +50,6 @@
 
 typedef struct VTPARSER VTPARSER;
 typedef struct STATE STATE;
-typedef struct ACTION ACTION;
-
-struct ACTION{
-    wchar_t lo, hi;
-    void (*cb)(VTPARSER *p, wchar_t w);
-    STATE *next;
-};
-
 typedef void (*VTCALLBACK)(VTPARSER *v, void *p, wchar_t w, wchar_t iw,
                            int argc, int *argv, const wchar_t *osc);
 
