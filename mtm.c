@@ -725,18 +725,6 @@ freenode(NODE *n, bool recurse) /* Free a node. */
 }
 
 static void
-refreshchildren(NODE *n)
-{
-    if (n->t == VIEW)
-        pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x,
-                     n->y + n->h - 1, n->x + n->w - 1);
-    if (n->c1)
-        refreshchildren(n->c1);
-    if (n->c2)
-        refreshchildren(n->c2);
-}
-
-static void
 fixcursor(void) /* Move the terminal cursor to the active view. */
 {
     if (focused){
@@ -1122,10 +1110,10 @@ run(void) /* Run MTM. */
             r = wget_wch(focused->s->win, &w);
         getinput(root, &sfds);
 
-        refreshchildren(root);
+        draw(root);
         doupdate();
         fixcursor();
-        refreshchildren(focused);
+        draw(focused);
         doupdate();
     }
 }
