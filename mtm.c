@@ -71,7 +71,7 @@ struct NODE{
 static NODE *root, *focused, *lastfocused = NULL;
 static int commandkey = CTL(COMMAND_KEY), nfds = 1; /* stdin */
 static fd_set fds;
-static char iobuf[BUFSIZ + 1];
+static char iobuf[BUFSIZ];
 
 static void setupevents(NODE *n);
 static void reshape(NODE *n, int y, int x, int h, int w);
@@ -759,7 +759,6 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 
     nodelay(pri->win, TRUE); nodelay(alt->win, TRUE);
     scrollok(pri->win, TRUE); scrollok(alt->win, TRUE);
-    idlok(pri->win, TRUE); idlok(alt->win, TRUE);
     keypad(pri->win, TRUE); keypad(alt->win, TRUE);
 
     setupevents(n);
@@ -986,7 +985,7 @@ getinput(NODE *n, fd_set *f) /* Recursively check all ptty's for input. */
         return false;
 
     if (n && n->t == VIEW && n->pt > 0 && FD_ISSET(n->pt, f)){
-        ssize_t r = read(n->pt, iobuf, BUFSIZ);
+        ssize_t r = read(n->pt, iobuf, sizeof(iobuf));
         if (r > 0)
             vtwrite(&n->vp, iobuf, r);
         if (r <= 0 && errno != EINTR && errno != EWOULDBLOCK)
