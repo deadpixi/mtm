@@ -32,10 +32,6 @@
 #include "vtparser.h"
 
 /*** CONFIGURATION */
-typedef struct CHARMAP CHARMAP;
-struct CHARMAP{
-    wint_t i, o;
-};
 #include "config.h"
 
 #define MIN(x, y) ((x) < (y)? (x) : (y))
@@ -67,7 +63,7 @@ struct NODE{
     wchar_t repc;
     NODE *p, *c1, *c2;
     SCRN pri, alt, *s;
-    CHARMAP *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
+    wchar_t *g0, *g1, *g2, *g3, *gc, *gs, *sgc, *sgs;
     VTPARSER vp;
 };
 
@@ -541,11 +537,7 @@ HANDLER(print) /* Print a character to the terminal */
         y -= tos;
     }
 
-    for (const CHARMAP *i = n->gc; i->i != WEOF; i++) if (i->i == (wint_t)w){
-        w = i->o;
-        break;
-    }
-
+    w = (w < MAXMAP && n->gc[w])? n->gc[w] : w;
     n->repc = w;
     if (x == mx - wcwidth(w)){
         s->xenl = true;
@@ -561,7 +553,7 @@ HANDLER(rep) /* REP - Repeat Character */
 ENDHANDLER
 
 HANDLER(scs) /* Select Character Set */
-    CHARMAP **t = NULL;
+    wchar_t **t = NULL;
     switch (iw){
         case L'(': t = &n->g0;  break;
         case L')': t = &n->g1;  break;
@@ -765,6 +757,7 @@ newview(NODE *p, int y, int x, int h, int w) /* Open a new view. */
 
     nodelay(pri->win, TRUE); nodelay(alt->win, TRUE);
     scrollok(pri->win, TRUE); scrollok(alt->win, TRUE);
+    idlok(pri->win, TRUE); idlok(alt->win, TRUE);
     keypad(pri->win, TRUE); keypad(alt->win, TRUE);
 
     setupevents(n);
