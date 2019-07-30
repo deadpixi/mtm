@@ -22,8 +22,9 @@ config.h: config.def.h
 	cp -i config.def.h config.h
 
 install: mtm
-	cp mtm $(DESTDIR)/bin
-	cp mtm.1 $(MANDIR)
+	mkdir -p $(DESTDIR)/bin $(MANDIR)
+	install -m755 mtm $(DESTDIR)/bin/mtm
+	install -m644 mtm.1 $(MANDIR)/mtm.1
 
 install-terminfo: mtm.ti
 	tic -s -x mtm.ti
