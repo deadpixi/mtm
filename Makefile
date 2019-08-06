@@ -1,17 +1,21 @@
 CC        ?= gcc
 CFLAGS    ?= -std=c99 -Wall -Wextra -pedantic -O3
+CPPFLAGS  ?=
+LDFLAGS   ?=
 FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
 HEADERS   ?=
-LIBPATH   ?=
 DESTDIR   ?= /usr/local
 MANDIR    ?= $(DESTDIR)/man/man1
 CURSESLIB ?= ncursesw
-LIBS      ?= -l$(CURSESLIB) -lutil
+LIBRARIES ?= -l$(CURSESLIB) -lutil
+
+CPPFLAGS  += $(FEATURES)
+LDFLAGS   += $(LIBRARIES)
 
 all: mtm
 
 mtm: vtparser.c mtm.c config.h
-	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) vtparser.c mtm.c $(LIBPATH) $(LIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(HEADERS) vtparser.c mtm.c
 
 vtparser.c: vttable.c
 
