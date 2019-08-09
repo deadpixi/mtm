@@ -336,6 +336,7 @@ HANDLER(ed) /* ED - Erase in Display */
     int o = 1;
     switch (P0(0)){
         case 0: wclrtobot(win);                     break;
+        case 3: werase(win);                        break;
         case 2: wmove(win, tos, 0); wclrtobot(win); break;
         case 1:
             for (int i = tos; i < py; i++){
