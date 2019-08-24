@@ -144,13 +144,16 @@ This can be used if the
 .Xr terminfo 5
 description is installed and the host terminal supports 256 or more colors.
 .It screen
-This is the default.
+This is the default if 256-color support is not detected.
 It is widely supported and its description is installed by default on most systems.
 This is a good choice if the
 .Nm
 .Xr terminfo 5
 description is not installed everywhere you expect to use
 .Nm mtm "."
+.It screen-256color
+This is the default if 256-color support is detected.
+The same advice given for above applies here too.
 .El
 .Ss The mtm Environment
 .Nm
@@ -196,7 +199,7 @@ see
 .Xr passwd 5
 .Pc
 if available,
-and will finally use
+and will finally fall back to
 .Pa "/bin/sh" "."
 .Sh SEE ALSO
 .Xr sh 1
