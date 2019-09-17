@@ -117,7 +117,7 @@ nothing else to learn.
 
 Screenshots
 -----------
-mtm running three instances of `tine <https://github.com/deadpixi/tine`_
+mtm running three instances of `tine <https://github.com/deadpixi/tine>`_
 
 .. image:: screenshot2.png
 
