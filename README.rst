@@ -117,9 +117,13 @@ nothing else to learn.
 
 Screenshots
 -----------
-
-.. image:: screenshot.png
+mtm running three instances of `tine <https://github.com/deadpixi/tine`_
 .. image:: screenshot2.png
+
+mtm running various other programs
+.. image:: screenshot.png
+
+mtm showing its compatibility
 .. image:: vttest1.png
 .. image:: vttest2.png
 
