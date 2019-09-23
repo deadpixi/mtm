@@ -20,7 +20,8 @@ mtm|Micro Terminal Multiplexer,
 	setaf=\E[%p1%{30}%+%dm, sgr0=\E[m\017,
 	sgr=\E[0%?%p6%t;1%;%?%p1%t;3%;%?%p2%t;4%;%?%p3%t;7%;%?%p4%t;5%;%?%p5%t;2%;m%?%p9%t\016%e\017%;,
 	smacs=\016, smcup=\E[1049h, smir=\E[4h, smkx=\E[1h\E=, smso=\E[7m,
-	smul=\E[4m, tbc=\E[3g, vpa=\E[%i%p1%dd, E3=\E[3J,
+	smul=\E[4m, tbc=\E[3g, vpa=\E[%i%p1%dd, E3=\E[3J, u8=\006, u9=\005,
+
 
 mtm-256color|Micro Terminal Multiplexer with 256 colors,
 	colors#0x100, pairs#0x10000,
