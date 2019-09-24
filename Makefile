@@ -1,5 +1,5 @@
 CC        ?= gcc
-CFLAGS    ?= -std=c99 -Wall -Wextra -pedantic -g
+CFLAGS    ?= -std=c99 -Wall -Wextra -pedantic -Os
 FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
 HEADERS   ?=
 LIBPATH   ?=
@@ -12,6 +12,7 @@ all: mtm
 
 mtm: vtparser.c mtm.c config.h
 	$(CC) $(CFLAGS) $(FEATURES) -o $@ $(HEADERS) vtparser.c mtm.c $(LIBPATH) $(LIBS)
+	strip -s mtm
 
 config.h: config.def.h
 	cp -i config.def.h config.h
