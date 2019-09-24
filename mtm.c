@@ -307,7 +307,13 @@ HANDLER(rc) /* RC - Restore Cursor */
     s->bg = s->sbg;                          /* get background color      */
     s->xenl = s->oxenl;                      /* get xenl state            */
     n->gc = n->sgc; n->gs = n->sgs;          /* save character sets        */
-    wcolor_set(win, alloc_pair(s->fg, s->bg), NULL); /* restore colors */
+
+    /* restore colors */
+    int cp = alloc_pair(s->fg, s->bg);
+    wcolor_set(win, cp, NULL);
+    cchar_t c;
+    setcchar(&c, L" ", A_NORMAL, cp, NULL);
+    wbkgrndset(win, &c);
 ENDHANDLER
 
 HANDLER(tbc) /* TBC - Tabulation Clear */
@@ -323,11 +329,12 @@ HANDLER(cub) /* CUB - Cursor Backward */
 ENDHANDLER
 
 HANDLER(el) /* EL - Erase in Line */
-    chtype r[] = {COLOR_PAIR(0) | ' ', 0};
+    cchar_t b;
+    setcchar(&b, L" ", A_NORMAL, alloc_pair(s->fg, s->bg), NULL);
     switch (P0(0)){
-        case 0: wclrtoeol(win);                                          break;
-        case 1: for (int i = 0; i <= x; i++) mvwaddchstr(win, py, i, r); break;
-        case 2: wmove(win, py, 0); wclrtoeol(win);                       break;
+        case 0: wclrtoeol(win);                                                 break;
+        case 1: for (int i = 0; i <= x; i++) mvwadd_wchnstr(win, py, i, &b, 1); break;
+        case 2: wmove(win, py, 0); wclrtoeol(win);                              break;
     }
     wmove(win, py, x);
 ENDHANDLER
@@ -351,9 +358,10 @@ HANDLER(ed) /* ED - Erase in Display */
 ENDHANDLER
 
 HANDLER(ech) /* ECH - Erase Character */
-    chtype c[] = {COLOR_PAIR(0) | ' ', 0};
+    cchar_t c;
+    setcchar(&c, L" ", A_NORMAL, alloc_pair(s->fg, s->bg), NULL);
     for (int i = 0; i < P1(0); i++)
-        mvwaddchnstr(win, py, x + i, c, 1);
+        mvwadd_wchnstr(win, py, x + i, &c, 1);
     wmove(win, py, px);
 ENDHANDLER
 
@@ -367,13 +375,15 @@ HANDLER(dsr) /* DSR - Device Status Report */
     SEND(n, buf);
 ENDHANDLER
 
-HANDLER(idl) /* IL or DL - Insert/Delete Line respecting the scroll region */
-    /* insert/delete line has to respect the scrolling region */
-    int otop = 0, obot = 0, p1 = P1(0);
+HANDLER(idl) /* IL or DL - Insert/Delete Line */
+    /* we don't use insdelln here because it inserts above and not below,
+     * and has a few other edge cases... */
+    int otop = 0, obot = 0, p1 = MIN(P1(0), (my - 1) - y);
     wgetscrreg(win, &otop, &obot);
-    p1 = MIN(p1, obot - otop + 1); /* work around a potential bug in ncurses */
+    wsetscrreg(win, py, obot);
     wscrl(win, w == L'L'? -p1 : p1);
     wsetscrreg(win, otop, obot);
+    wmove(win, py, 0);
 ENDHANDLER
 
 HANDLER(csr) /* CSR - Change Scrolling Region */
@@ -386,13 +396,14 @@ HANDLER(decreqtparm) /* DECREQTPARM - Request Device Parameters */
 ENDHANDLER
 
 HANDLER(sgr0) /* Reset SGR to default */
-    wattrset(s->win, A_NORMAL);
-    wcolor_set(s->win, 0, NULL);
+    wattrset(win, A_NORMAL);
+    wcolor_set(win, 0, NULL);
     s->fg = s->bg = -1;
+    wbkgdset(win, COLOR_PAIR(0) | ' ');
 ENDHANDLER
 
 HANDLER(cls) /* Clear screen and reset SGR. */
-    CALL(sgr0);
+    //CALL(sgr0);             XXX
     CALL(cup);
     wclrtobot(win);
     CALL(cup);
@@ -494,8 +505,13 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         case 23:  wattroff(win, A_ITALIC);                    break;
         #endif
     }
-    if (doc)
-        wcolor_set(win, alloc_pair(s->fg = fg, s->bg = bg), NULL);
+    if (doc){
+        int p = alloc_pair(s->fg = fg, s->bg = bg);
+        wcolor_set(win, p, NULL);
+        cchar_t c;
+        setcchar(&c, L" ", A_NORMAL, p, NULL);
+        wbkgrndset(win, &c);
+   }
 }
 
 HANDLER(cr) /* CR - Carriage Return */
