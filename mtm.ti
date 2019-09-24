@@ -1,5 +1,5 @@
 mtm|Micro Terminal Multiplexer,
-	am, xenl, mir, msgr, cols#80, lines#25, it#8, colors#8, pairs#64, U8#1,
+	am, bce, xenl, mir, msgr, cols#80, lines#25, it#8, colors#8, pairs#64, U8#1,
 	acsc=++\,\,--..00``aaffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
 	bel=\007, blink=\E[5m, bold=\E[1m, cbt=\E[Z, civis=\E[25l,
 	clear=\E[H\E[J, cnorm=\E[25h, cr=\r, csr=\E[%i%p1%d;%p2%dr,

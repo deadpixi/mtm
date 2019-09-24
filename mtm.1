@@ -37,9 +37,9 @@ Set the
 environment variable within the mtm session to
 .Ar TERM "."
 By default, this is
-.Em "screen" ","
+.Em "screen-bce" ","
 or
-.Em "screen-256color"
+.Em "screen-256color-bce"
 if
 .Nm
 detects that the host terminal supports 256 colors.
@@ -143,7 +143,7 @@ This can be used if the
 .Nm
 .Xr terminfo 5
 description is installed and the host terminal supports 256 or more colors.
-.It screen
+.It screen-bce
 This is the default if 256-color support is not detected.
 It is widely supported and its description is installed by default on most systems.
 This is a good choice if the
@@ -151,7 +151,7 @@ This is a good choice if the
 .Xr terminfo 5
 description is not installed everywhere you expect to use
 .Nm mtm "."
-.It screen-256color
+.It screen-bce-256color
 This is the default if 256-color support is detected.
 The same advice given for above applies here too.
 .El

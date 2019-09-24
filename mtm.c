@@ -402,8 +402,7 @@ HANDLER(sgr0) /* Reset SGR to default */
     wbkgdset(win, COLOR_PAIR(0) | ' ');
 ENDHANDLER
 
-HANDLER(cls) /* Clear screen and reset SGR. */
-    //CALL(sgr0);             XXX
+HANDLER(cls) /* Clear screen */
     CALL(cup);
     wclrtobot(win);
     CALL(cup);
@@ -414,6 +413,7 @@ HANDLER(ris) /* RIS - Reset to Initial State */
     n->g2 = CSET_US; n->g3 = CSET_GRAPH;
     n->decom = s->insert = s->oxenl = s->xenl = n->lnm = false;
     CALL(cls);
+    CALL(sgr0);
     n->am = n->pnm = true;
     n->pri.vis = n->alt.vis = 1;
     n->s = &n->pri;
@@ -754,7 +754,7 @@ getterm(void)
     if (term)
         return term;
     if (envterm && COLORS >= 256 && !strstr(DEFAULT_TERMINAL, "-256color"))
-        return DEFAULT_TERMINAL "-256color";
+        return DEFAULT_256_COLOR_TERMINAL;
     return DEFAULT_TERMINAL;
 }
 
