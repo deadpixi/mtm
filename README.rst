@@ -136,7 +136,7 @@ Compatibility
 just work out-of-the-box for you, thanks to the efforts of the various
 hackers over the years to make terminal-independence a reality.)
 
-By default, mtm advertises itself as a `screen` terminal.  This is what `GNU
+By default, mtm advertises itself as a `screen-bce` terminal.  This is what `GNU
 screen` and `tmux` advertise themselves as, and is a well-known terminal
 type that has been in the default terminfo database for decades.
 
@@ -186,7 +186,7 @@ Using these terminfo entries allows programs to use the full power of mtm's
 terminal emulation, but it is entirely optional. A primary design goal
 of mtm was for it to be completely usable on systems that didn't have the
 mtm terminfo entry installed. By default, mtm advertises itself as the
-widely-available `screen` terminal type.
+widely-available `screen-bce` terminal type.
 
 Copyright and License
 =====================
