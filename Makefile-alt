@@ -1,0 +1,32 @@
+CC           ?= gcc
+CFLAGS       ?= -std=c99 -Wall -Wextra -pedantic -Os
+CURSESCFLAGS ?=
+CURSESLIBS   ?= -lncursesw
+DESTDIR      ?= /usr/local
+MANDIR       ?= $(DESTDIR)/man/man1
+
+CFLAGS       := $(CFLAGS) $(CURSESCFLAGS)
+LIBS         := -lutil $(CURSESLIBS)
+FEATURES     := -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
+
+all: mtm
+
+mtm: vtparser.c mtm.c config.h
+	echo $(CC) $(CFLAGS) $(FEATURES) -o $@ vtparser.c mtm.c $(LIBS)
+	$(CC) $(CFLAGS) $(FEATURES) -o $@ vtparser.c mtm.c $(LIBS)
+	strip -s mtm
+
+config.h: config.def.h
+	cp -i config.def.h config.h
+
+install: mtm
+	mkdir -p $(DESTDIR)/bin
+	mkdir -p $(MANDIR)
+	cp mtm $(DESTDIR)/bin
+	cp mtm.1 $(MANDIR)
+
+install-terminfo: mtm.ti
+	tic -s -x mtm.ti
+
+clean:
+	rm -f *.o mtm
