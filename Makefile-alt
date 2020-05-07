@@ -12,7 +12,6 @@ FEATURES     := -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EX
 all: mtm
 
 mtm: vtparser.c mtm.c config.h
-	echo $(CC) $(CFLAGS) $(FEATURES) -o $@ vtparser.c mtm.c $(LIBS)
 	$(CC) $(CFLAGS) $(FEATURES) -o $@ vtparser.c mtm.c $(LIBS)
 	strip -s mtm
 
