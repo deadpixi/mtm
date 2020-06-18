@@ -4,7 +4,7 @@
 
 #define COLOR_MAX 256
 static short pairs[COLOR_MAX][COLOR_MAX];
-static short next = 0;
+static short next = 1;
 
 void
 start_pairs(void)
@@ -24,10 +24,10 @@ mtm_alloc_pair(int fg, int bg)
       return -1;
    if (fg >= COLOR_MAX || bg >= COLOR_MAX)
       return -1;
-   if (pairs[fg][bg] == -1)
+   if (pairs[fg][bg] == -1){
       pairs[fg][bg] = next++;
+      init_pair(pairs[fg][bg], fg, bg);
+   }
    return pairs[fg][bg];
 #endif
 }
-
-

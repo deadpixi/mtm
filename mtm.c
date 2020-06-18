@@ -1152,6 +1152,7 @@ main(int argc, char **argv)
     intrflush(stdscr, FALSE);
     start_color();
     use_default_colors();
+    start_pairs();
 
     root = newview(NULL, 0, 0, LINES, COLS);
     if (!root)
