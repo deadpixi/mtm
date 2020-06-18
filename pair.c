@@ -35,6 +35,6 @@ mtm_alloc_pair(int fg, int bg)
         if (p->fg == fg && p->bg == bg && p->cp != -1)
             return p->cp;
     }
-    return 0;
+    return -1;
 #endif
 }
