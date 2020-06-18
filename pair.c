@@ -3,31 +3,39 @@
 #include "config.h"
 
 #define COLOR_MAX 256
-static short pairs[COLOR_MAX][COLOR_MAX];
-static short next = 1;
+typedef struct PAIR PAIR;
+struct PAIR{
+    short fg, bg, cp;
+};
+
+static PAIR pairs[COLOR_MAX * COLOR_MAX];
 
 void
 start_pairs(void)
 {
-   for (short i = 0; i < COLOR_MAX; i++)
-      for (short j = 0; j < COLOR_MAX; j++)
-         pairs[i][j] = -1;
+    for (int i = 0; i < COLOR_MAX * COLOR_MAX; i++)
+        pairs[i].fg = pairs[i].bg = pairs[i].cp = -1;
 }
 
 short
 mtm_alloc_pair(int fg, int bg)
 {
 #if USE_ALLOC_PAIR
-   return alloc_pair(fg, bg);
+    return alloc_pair(fg, bg);
 #else
-   if (next >= COLOR_PAIRS)
-      return -1;
-   if (fg >= COLOR_MAX || bg >= COLOR_MAX)
-      return -1;
-   if (pairs[fg][bg] == -1){
-      pairs[fg][bg] = next++;
-      init_pair(pairs[fg][bg], fg, bg);
-   }
-   return pairs[fg][bg];
+    if (fg >= COLOR_MAX || bg >= COLOR_MAX)
+       return -1;
+    for (int i = 0; i < COLOR_MAX * COLOR_MAX; i++){
+        PAIR *p = pairs + i;
+        if (p->cp == -1){
+            p->fg = fg;
+            p->bg = bg;
+            p->cp = i + 1;
+            init_pair(p->cp, p->fg, p->bg);
+        }
+        if (p->fg == fg && p->bg == bg)
+            return p->cp;
+    }
+    return 0;
 #endif
 }
