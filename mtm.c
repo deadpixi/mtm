@@ -309,7 +309,7 @@ HANDLER(rc) /* RC - Restore Cursor */
     n->gc = n->sgc; n->gs = n->sgs;          /* save character sets        */
 
     /* restore colors */
-    int cp = alloc_pair(s->fg, s->bg);
+    int cp = mtm_alloc_pair(s->fg, s->bg);
     wcolor_set(win, cp, NULL);
     cchar_t c;
     setcchar(&c, L" ", A_NORMAL, cp, NULL);
@@ -330,7 +330,7 @@ ENDHANDLER
 
 HANDLER(el) /* EL - Erase in Line */
     cchar_t b;
-    setcchar(&b, L" ", A_NORMAL, alloc_pair(s->fg, s->bg), NULL);
+    setcchar(&b, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
     switch (P0(0)){
         case 0: wclrtoeol(win);                                                 break;
         case 1: for (int i = 0; i <= x; i++) mvwadd_wchnstr(win, py, i, &b, 1); break;
@@ -359,7 +359,7 @@ ENDHANDLER
 
 HANDLER(ech) /* ECH - Erase Character */
     cchar_t c;
-    setcchar(&c, L" ", A_NORMAL, alloc_pair(s->fg, s->bg), NULL);
+    setcchar(&c, L" ", A_NORMAL, mtm_alloc_pair(s->fg, s->bg), NULL);
     for (int i = 0; i < P1(0); i++)
         mvwadd_wchnstr(win, py, x + i, &c, 1);
     wmove(win, py, px);
@@ -506,7 +506,7 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         #endif
     }
     if (doc){
-        int p = alloc_pair(s->fg = fg, s->bg = bg);
+        int p = mtm_alloc_pair(s->fg = fg, s->bg = bg);
         wcolor_set(win, p, NULL);
         cchar_t c;
         setcchar(&c, L" ", A_NORMAL, p, NULL);

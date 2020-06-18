@@ -5,7 +5,7 @@ HEADERS   ?=
 LIBPATH   ?=
 DESTDIR   ?= /usr/local
 MANDIR    ?= $(DESTDIR)/man/man1
-CURSESLIB ?= ncursesw
+CURSESLIB ?= curses
 LIBS      ?= -l$(CURSESLIB) -lutil
 
 all: mtm
