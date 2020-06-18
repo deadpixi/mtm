@@ -30,10 +30,9 @@ mtm_alloc_pair(int fg, int bg)
         if (p->cp == -1){
             p->fg = fg;
             p->bg = bg;
-            p->cp = i + 1;
-            init_pair(p->cp, p->fg, p->bg);
+            p->cp = init_pair(i + 1, p->fg, p->bg) == OK? i + 1 : -1;
         }
-        if (p->fg == fg && p->bg == bg)
+        if (p->fg == fg && p->bg == bg && p->cp != -1)
             return p->cp;
     }
     return 0;
