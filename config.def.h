@@ -61,7 +61,7 @@
 
 /* The path for the wide-character curses library. */
 #ifndef NCURSESW_INCLUDE_H
-    #if defined(__APPLE__) || !defined(__linux__) || defined(__FreeBSD__)
+    #if defined(__APPLE__) || !defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)
         #define NCURSESW_INCLUDE_H <curses.h>
     #else
         #define NCURSESW_INCLUDE_H <ncursesw/curses.h>
@@ -71,7 +71,7 @@
 
 /* Includes needed to make forkpty(3) work. */
 #ifndef FORKPTY_INCLUDE_H
-    #if defined(__APPLE__)
+    #if defined(__APPLE__) || defined(__OpenBSD__)
         #define FORKPTY_INCLUDE_H <util.h>
     #elif defined(__FreeBSD__)
         #define FORKPTY_INCLUDE_H <libutil.h>
