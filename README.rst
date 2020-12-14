@@ -3,7 +3,7 @@ Introduction
 
 mtm is the Micro Terminal Multiplexer, a terminal multiplexer.
 
-It has four major features/princples:
+It has four major features/principles:
 
 Simplicity
     There are only a few commands, two of which are hardly ever used.
