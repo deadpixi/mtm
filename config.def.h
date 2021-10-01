@@ -43,6 +43,8 @@
 #define MOVE_RIGHT      CODE(KEY_RIGHT)
 #define MOVE_LEFT       CODE(KEY_LEFT)
 #define MOVE_OTHER      KEY(L'o')
+#define MOVE_BACKWARD   KEY(L'[')
+#define MOVE_FORWARD    KEY(L']')
 
 /* The split terminal keys. */
 #define HSPLIT KEY(L'h')

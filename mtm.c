@@ -833,6 +833,9 @@ focus(NODE *n) /* Focus a node. */
         focus(n->c1? n->c1 : n->c2);
 }
 
+#define BACKWARD(n) ( n->p ? (n->p->c1 == n ? n->p->p : n->p->c1) : n )
+#define FORWARD(n)  ( n->p ? (n->p->c2 ? n->p->c2 : n->c2) : n )
+
 #define ABOVE(n) n->y - 2, n->x + n->w / 2
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n)  n->y + n->h / 2, n->x - 2
@@ -1117,6 +1120,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  MOVE_LEFT,           focus(findnode(root, LEFT(n))))
     DO(true,  MOVE_RIGHT,          focus(findnode(root, RIGHT(n))))
     DO(true,  MOVE_OTHER,          focus(lastfocused))
+    DO(true,  MOVE_BACKWARD,       focus(BACKWARD(n)))
+    DO(true,  MOVE_FORWARD,        focus(FORWARD(n)))
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  FULLSCREEN,          togglefullscreen())
