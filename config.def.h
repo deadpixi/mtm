@@ -54,6 +54,10 @@
 /* The force redraw key. */
 #define REDRAW KEY(L'l')
 
+/* Toggle fullscreen. */
+#define FULLSCREEN KEY(L'f')
+#define START_IN_FULLSCREEN 0
+
 /* The scrollback keys. */
 #define SCROLLUP CODE(KEY_PPAGE)
 #define SCROLLDOWN CODE(KEY_NPAGE)
