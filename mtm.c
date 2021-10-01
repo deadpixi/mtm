@@ -1122,6 +1122,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  MOVE_OTHER,          focus(lastfocused))
     DO(true,  MOVE_BACKWARD,       focus(BACKWARD(n)))
     DO(true,  MOVE_FORWARD,        focus(FORWARD(n)))
+    DO(false, CODE(KEY_SLEFT),     focus(BACKWARD(n)))
+    DO(false, CODE(KEY_SRIGHT),    focus(FORWARD(n)))
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  FULLSCREEN,          togglefullscreen())
@@ -1164,6 +1166,8 @@ run(void) /* Run MTM. */
 int
 main(int argc, char **argv)
 {
+    if (!getenv("ESCDELAY"))
+        set_escdelay(100);
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
