@@ -79,6 +79,8 @@ static void draw(NODE *n);
 static void reshapechildren(NODE *n);
 static const char *term = NULL;
 static void freenode(NODE *n, bool recursive);
+void start_pairs(void);
+short mtm_alloc_pair(int fg, int bg);
 
 /*** UTILITY FUNCTIONS */
 static void
