@@ -18,6 +18,7 @@ config.h: config.def.h
 	cp -i config.def.h config.h
 
 install: mtm
+	mkdir -p $(DESTDIR)/bin $(MANDIR)
 	cp mtm $(DESTDIR)/bin
 	cp mtm.1 $(MANDIR)
 
