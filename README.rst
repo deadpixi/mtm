@@ -145,7 +145,7 @@ type that has been in the default terminfo database for decades.
 with mtm, and vice-versa. Their work is excellent, though, and you should
 definitely check it out.)
 
-The `mtm` Terminal Types
+The (optional!) `mtm` Terminal Types
 ------------------------
 mtm comes with a terminfo description file called mtm.ti.  This file
 describes all of the features supported by mtm.
