@@ -20,6 +20,12 @@
 #define DEFAULT_TERMINAL "screen-bce"
 #define DEFAULT_256_COLOR_TERMINAL "screen-256color-bce"
 
+/* Sets how long (in milliseconds) mtm should wait for an escape sequence
+ * to follow after the escape key is pressed before sending it on to
+ * the focused virtual terminal.
+ */
+#define ESCAPE_TIME 500
+
 /* mtm supports a scrollback buffer, allowing users to scroll back
  * through the output history of a virtual terminal. The SCROLLBACK
  * knob controls how many lines are saved (minus however many are

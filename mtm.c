@@ -1149,6 +1149,7 @@ main(int argc, char **argv)
 
     if (!initscr())
         quit(EXIT_FAILURE, "could not initialize terminal");
+    ESCDELAY = ESCAPE_TIME;
     raw();
     noecho();
     nonl();
