@@ -3,6 +3,12 @@
 #define NO_ITALICS
  */
 
+/* mtm advertises support for italic text by default. If the host
+ * terminal does not support italics, this will fail. Define this
+ * to map italic text to reverse text.
+#define REVERSE_ITALICS
+ */
+
 /* mtm by default will advertise itself as a "screen-bce" terminal.
  * This is the terminal type advertised by such programs as
  * screen(1) and tmux(1) and is a widely-supported terminal type.

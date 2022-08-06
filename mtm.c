@@ -503,10 +503,14 @@ HANDLER(sgr) /* SGR - Select Graphic Rendition */
         case 105: bg = COLOR_MAGENTA;                         doc = do16;  break;
         case 106: bg = COLOR_CYAN;                            doc = do16;  break;
         case 107: bg = COLOR_WHITE;                           doc = do16;  break;
-        #if defined(A_ITALIC) && !defined(NO_ITALICS )
+        #if defined(A_ITALIC) && !defined(NO_ITALICS) && !defined(REVERSE_ITALICS)
         case  3:  wattron(win,  A_ITALIC);                    break;
         case 23:  wattroff(win, A_ITALIC);                    break;
         #endif
+	#if defined(REVERSE_ITALICS)
+	case  3:  wattron(win,  A_REVERSE);                   break;
+	case 23:  wattroff(win, A_REVERSE);                   break;
+	#endif
     }
     if (doc){
         int p = mtm_alloc_pair(s->fg = fg, s->bg = bg);
