@@ -22,6 +22,10 @@ install: mtm
 	cp mtm $(DESTDIR)/bin
 	cp mtm.1 $(MANDIR)
 
+uninstall:
+	rm -f $(DESTDIR)/bin/mtm
+	rm -f $(MANDIR)/mtm.1
+
 install-terminfo: mtm.ti
 	tic -s -x mtm.ti
 
