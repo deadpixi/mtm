@@ -8,6 +8,10 @@ MANDIR    ?= $(DESTDIR)/share/man/man1
 CURSESLIB ?= ncursesw
 LIBS      ?= -l$(CURSESLIB) -lutil
 
+ifeq ("$(shell basename $(shell command -v pkg-config))", "pkg-config")
+    LIBS := $(shell pkg-config --libs $(CURSESLIB))
+endif
+
 all: mtm
 
 mtm: vtparser.c mtm.c pair.c config.h
