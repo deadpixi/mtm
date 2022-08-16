@@ -1,0 +1,9 @@
+CURSESLIB ?= ncursesw
+LIBS ?= -l$(CURSESLIB) -lutil
+DESTDIR   ?= /usr/local
+MANDIR    ?= $(DESTDIR)/share/man/man1
+
+FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
+HEADERS   ?=
+LIBPATH   ?=
+CC        ?= gcc

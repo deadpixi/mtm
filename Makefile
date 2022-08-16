@@ -1,13 +1,6 @@
-CC        ?= gcc
-CFLAGS    ?= -std=c99 -Wall -Wextra -pedantic -Os
-FEATURES  ?= -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED
-HEADERS   ?=
-LIBPATH   ?=
-DESTDIR   ?= /usr/local
-MANDIR    ?= $(DESTDIR)/share/man/man1
+include config.mk
 
-CURSESLIB ?= ncursesw
-LIBS ?= -l$(CURSESLIB) -lutil
+CFLAGS    ?= -std=c99 -Wall -Wextra -pedantic -Os
 
 # Guess CURSESLIB and LIBS but prefer the user choices if possible
 NEWCURSES = "$(shell pkg-config --libs curses)"

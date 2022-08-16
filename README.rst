@@ -42,7 +42,7 @@ Installation and configuration is fairly simple:
   compiled with its internal SIGWINCH handler; this is true for most
   precompiled distributions.  Other curses implementations might work,
   but have not been tested.
-- Edit the variables at the top of the Makefile if you need to
+- Edit the variables at the top of the config.mk if you need to
   (you probably don't).
 - If you want to change the default keybindings or other compile-time flags,
   copy `config.def.h` to `config.h` and edit the copy. Otherwise the build
@@ -205,4 +205,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
