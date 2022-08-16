@@ -5,11 +5,40 @@ HEADERS   ?=
 LIBPATH   ?=
 DESTDIR   ?= /usr/local
 MANDIR    ?= $(DESTDIR)/share/man/man1
+
 CURSESLIB ?= ncursesw
-LIBS      ?= -l$(CURSESLIB) -lutil
+LIBSDEFAULT ?= -l$(CURSESLIB) -lutil
+
+# Guess CURSESLIB and LIBS but prefer the user choices if possible
+NEWCURSES = "$(shell pkg-config --libs curses)"
+ifeq ($(.SHELLSTATUS),0)
+	CURSESLIB = $(NEWCURSES)
+endif
+
+NEWCURSES = "$(shell pkg-config --libs cursesw)"
+ifeq ($(.SHELLSTATUS),0)
+	CURSESLIB = $(NEWCURSES)
+endif
+
+NEWCURSES = "$(shell pkg-config --libs ncurses)"
+ifeq ($(.SHELLSTATUS),0)
+	CURSESLIB = $(NEWCURSES)
+endif
+
+NEWCURSES = "$(shell pkg-config --libs ncursesw)"
+ifeq ($(.SHELLSTATUS),0)
+	CURSESLIB = $(NEWCURSES)
+endif
+
+NEWCURSES = "$(shell pkg-config --libs $(CURSESLIB))"
+ifeq ($(.SHELLSTATUS),0)
+	CURSESLIB = $(NEWCURSES)
+endif
 
 ifeq ("$(shell basename $(shell command -v pkg-config))", "pkg-config")
     LIBS := $(shell pkg-config --libs $(CURSESLIB))
+else ("","")
+	LIBS := $(LIBSDEFAULT)
 endif
 
 all: mtm
