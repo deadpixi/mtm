@@ -7,7 +7,7 @@ DESTDIR   ?= /usr/local
 MANDIR    ?= $(DESTDIR)/share/man/man1
 
 CURSESLIB ?= ncursesw
-LIBSDEFAULT ?= -l$(CURSESLIB) -lutil
+LIBS ?= -l$(CURSESLIB) -lutil
 
 # Guess CURSESLIB and LIBS but prefer the user choices if possible
 NEWCURSES = "$(shell pkg-config --libs curses)"
@@ -37,8 +37,6 @@ endif
 
 ifeq ("$(shell basename $(shell command -v pkg-config))", "pkg-config")
     LIBS := $(shell pkg-config --libs $(CURSESLIB))
-else ("","")
-	LIBS := $(LIBSDEFAULT)
 endif
 
 all: mtm
