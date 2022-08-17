@@ -56,6 +56,7 @@
 
 /* The delete terminal key. */
 #define DELETE_NODE KEY(L'w')
+#define ONLY_NODE KEY(L'q')
 
 /* The force redraw key. */
 #define REDRAW KEY(L'l')
@@ -193,3 +194,4 @@ static wchar_t CSET_GRAPH[] ={ /* Graphics Set One */
 };
 
 #endif
+
