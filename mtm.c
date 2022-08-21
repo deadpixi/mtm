@@ -894,6 +894,12 @@ deletenode(NODE *n) /* Delete a node. */
 }
 
 static void
+bailout(void) /* nothing to do */
+{
+    ;
+}
+
+static void
 reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
 {
     int oy, ox;
@@ -1101,6 +1107,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(n))
+    DO(true,  BAILOUT,             bailout())
     DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
     DO(true,  SCROLLUP,            scrollback(n))
     DO(true,  SCROLLDOWN,          scrollforward(n))
@@ -1171,3 +1178,4 @@ main(int argc, char **argv)
     quit(EXIT_SUCCESS, NULL);
     return EXIT_SUCCESS; /* not reached */
 }
+
