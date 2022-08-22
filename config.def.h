@@ -58,7 +58,7 @@
 #define DELETE_NODE KEY(L'w')
 
 /* does nothing, specifically */
-#define BAILOUT KEY(L'g')
+#define BAILOUT KEY(L'c')
 
 /* The force redraw key. */
 #define REDRAW KEY(L'l')
