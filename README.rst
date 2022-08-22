@@ -55,6 +55,10 @@ Installation and configuration is fairly simple:
 
     make CURSESLIB=curses
 
+  or::
+
+    make HEADERS='-DNCURSESW_INCLUDE_H="<ncurses.h>"'
+
   whichever works for you.
 - Run `make install` if desired.
 
