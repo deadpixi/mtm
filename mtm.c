@@ -1122,6 +1122,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(n))
     DO(true,  ONLY_NODE,           onlynode(n))
+    DO(true,  BAILOUT,             (void)1)
     DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
     DO(true,  SCROLLUP,            scrollback(n))
     DO(true,  SCROLLDOWN,          scrollforward(n))
@@ -1174,6 +1175,7 @@ main(int argc, char **argv)
 
     if (!initscr())
         quit(EXIT_FAILURE, "could not initialize terminal");
+    ESCDELAY = ESCAPE_TIME;
     raw();
     noecho();
     nonl();
