@@ -32,3 +32,5 @@ install-terminfo: mtm.ti
 
 clean:
 	rm -f *.o mtm
+
+.PHONY: all install uninstall install-terminfo clean
