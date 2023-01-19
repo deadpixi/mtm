@@ -60,6 +60,9 @@
 /* does nothing, specifically */
 #define BAILOUT KEY(L'c')
 
+/* clears the scrollback and everything */
+#define NUKE KEY(L'k')
+
 /* The force redraw key. */
 #define REDRAW KEY(L'l')
 
