@@ -62,6 +62,7 @@
 
 /* The delete terminal key. */
 #define DELETE_NODE KEY(L'w')
+#define ONLY_NODE KEY(L'q')
 
 /* does nothing, specifically */
 #define BAILOUT KEY(L'c')

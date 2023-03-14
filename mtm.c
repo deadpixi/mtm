@@ -894,6 +894,26 @@ deletenode(NODE *n) /* Delete a node. */
 }
 
 static void
+onlynode(NODE *n) /* Delete other nodes. */
+{
+    struct NODE *node = NULL;
+    int next = false;
+    if (n != focused)
+        focus(n);
+    while(true){
+        /* KLUDGE: should go to the "next" node instead. */
+        (next=false) || ((node=findnode(root, ABOVE(n))) && (next=true));
+        next         || ((node=findnode(root, BELOW(n))) && (next=true));
+        next         || ((node=findnode(root,  LEFT(n))) && (next=true));
+        next         || ((node=findnode(root, RIGHT(n))) && (next=true));
+        if(!next)
+            break;
+        deletenode(node);
+    }
+}
+
+
+static void
 reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
 {
     int oy, ox;
@@ -1101,6 +1121,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(n))
+    DO(true,  ONLY_NODE,           onlynode(n))
     DO(true,  BAILOUT,             (void)1)
     DO(true,  NUKE,                wclear(n->s->win))
     DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
