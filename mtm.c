@@ -33,6 +33,7 @@
 
 /*** CONFIGURATION */
 #include "config.h"
+int isfullscreen = START_IN_FULLSCREEN;
 
 #define MIN(x, y) ((x) < (y)? (x) : (y))
 #define MAX(x, y) ((x) > (y)? (x) : (y))
@@ -838,6 +839,9 @@ focus(NODE *n) /* Focus a node. */
         focus(n->c1? n->c1 : n->c2);
 }
 
+#define BACKWARD(n) ( n->p ? (n->p->c1 == n ? n->p->p : n->p->c1) : n )
+#define FORWARD(n)  ( n->p ? (n->p->c2 ? n->p->c2 : n->c2) : n )
+
 #define ABOVE(n) n->y - 2, n->x + n->w / 2
 #define BELOW(n) n->y + n->h + 2, n->x + n->w / 2
 #define LEFT(n)  n->y + n->h / 2, n->x - 2
@@ -925,14 +929,19 @@ reshapeview(NODE *n, int d, int ow) /* Reshape a view. */
 static void
 reshapechildren(NODE *n) /* Reshape all children of a view. */
 {
-    if (n->t == HORIZONTAL){
-        int i = n->w % 2? 0 : 1;
-        reshape(n->c1, n->y, n->x, n->h, n->w / 2);
-        reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
-    } else if (n->t == VERTICAL){
-        int i = n->h % 2? 0 : 1;
-        reshape(n->c1, n->y, n->x, n->h / 2, n->w);
-        reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
+    if (isfullscreen) {
+        reshape(n->c1, 0, 0, LINES, COLS);
+        reshape(n->c2, 0, 0, LINES, COLS);
+    } else {
+	    if (n->t == HORIZONTAL){
+		int i = n->w % 2? 0 : 1;
+		reshape(n->c1, n->y, n->x, n->h, n->w / 2);
+		reshape(n->c2, n->y, n->x + n->w / 2 + 1, n->h, n->w / 2 - i);
+	    } else if (n->t == VERTICAL){
+		int i = n->h % 2? 0 : 1;
+		reshape(n->c1, n->y, n->x, n->h / 2, n->w);
+		reshape(n->c2, n->y + n->h / 2 + 1, n->x, n->h / 2 - i, n->w);
+	    }
     }
 }
 
@@ -948,6 +957,10 @@ reshape(NODE *n, int y, int x, int h, int w) /* Reshape a node. */
     n->x = x;
     n->h = MAX(h, 1);
     n->w = MAX(w, 1);
+    if (isfullscreen) {
+        n->h = LINES;
+        n->w = COLS;
+    }
 
     if (n->t == VIEW)
         reshapeview(n, d, ow);
@@ -960,20 +973,25 @@ static void
 drawchildren(const NODE *n) /* Draw all children of n. */
 {
     draw(n->c1);
-    if (n->t == HORIZONTAL)
-        mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
-    else
-        mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
-    wnoutrefresh(stdscr);
+	if (!isfullscreen) {
+	    if (n->t == HORIZONTAL)
+		mvvline(n->y, n->x + n->w / 2, ACS_VLINE, n->h);
+	    else
+		mvhline(n->y + n->h / 2, n->x, ACS_HLINE, n->w);
+	    wnoutrefresh(stdscr);
+	}
     draw(n->c2);
 }
 
 static void
 draw(NODE *n) /* Draw a node. */
 {
-    if (n->t == VIEW)
+    if (n->t == VIEW) {
+        if (isfullscreen && n != focused)
+            return;
         pnoutrefresh(n->s->win, n->s->off, 0, n->y, n->x,
                      n->y + n->h - 1, n->x + n->w - 1);
+    }
     else
         drawchildren(n);
 }
@@ -983,6 +1001,10 @@ split(NODE *n, Node t) /* Split a node. */
 {
     int nh = t == VERTICAL? (n->h - 1) / 2 : n->h;
     int nw = t == HORIZONTAL? (n->w) / 2 : n->w;
+    if (isfullscreen) {
+        nh = LINES;
+        nw = COLS;
+    }
     NODE *p = n->p;
     NODE *v = newview(NULL, 0, 0, MAX(0, nh), MAX(0, nw));
     if (!v)
@@ -997,6 +1019,12 @@ split(NODE *n, Node t) /* Split a node. */
     replacechild(p, n, c);
     focus(v);
     draw(p? p : root);
+}
+
+static void
+togglefullscreen() {
+    isfullscreen = !isfullscreen;
+    reshape(root, 0, 0, LINES, COLS);
 }
 
 static bool
@@ -1098,8 +1126,13 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  MOVE_LEFT,           focus(findnode(root, LEFT(n))))
     DO(true,  MOVE_RIGHT,          focus(findnode(root, RIGHT(n))))
     DO(true,  MOVE_OTHER,          focus(lastfocused))
+    DO(true,  MOVE_BACKWARD,       focus(BACKWARD(n)))
+    DO(true,  MOVE_FORWARD,        focus(FORWARD(n)))
+    DO(false, CODE(KEY_SLEFT),     focus(BACKWARD(n)))
+    DO(false, CODE(KEY_SRIGHT),    focus(FORWARD(n)))
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
+    DO(true,  FULLSCREEN,          togglefullscreen())
     DO(true,  DELETE_NODE,         deletenode(n))
     DO(true,  BAILOUT,             (void)1)
     DO(true,  NUKE,                wclear(n->s->win))
@@ -1141,6 +1174,8 @@ run(void) /* Run MTM. */
 int
 main(int argc, char **argv)
 {
+    if (!getenv("ESCDELAY"))
+        set_escdelay(100);
     FD_SET(STDIN_FILENO, &fds);
     setlocale(LC_ALL, "");
     signal(SIGCHLD, SIG_IGN); /* automatically reap children */
