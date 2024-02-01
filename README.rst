@@ -35,6 +35,16 @@ Rob posts updates about mtm on Twitter at http://twitter.com/TheKingAdRob.
 
 Installation
 ============
+
+Using Homebrew
+--------------
+
+mtm is available in Homebrew::
+
+    brew install mtm
+
+From source
+-----------
 Installation and configuration is fairly simple:
 
 - You need ncursesw.
