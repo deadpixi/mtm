@@ -1050,6 +1050,8 @@ handlechar(int r, int k) /* Handle a single input character. */
 {
     const char cmdstr[] = {commandkey, 0};
     static bool cmd = false;
+    static bool altcmd = false;
+    static bool cancel = false;
     NODE *n = focused;
     #define KERR(i) (r == ERR && (i) == k)
     #define KEY(i)  (r == OK  && (i) == k)
@@ -1057,63 +1059,100 @@ handlechar(int r, int k) /* Handle a single input character. */
     #define INSCR (n->s->tos != n->s->off)
     #define SB scrollbottom(n)
     #define DO(s, t, a) \
-        if (s == cmd && (t)) { a ; cmd = false; return true; }
+        if ((s == cmd) && (!cancel) && (t)) { a ; cmd = false; return true; }
+    #define DOALT(s, t, a) \
+        if ((s == altcmd) && (!cancel) && (t)) { a ; altcmd = false; return true; }
+    #define CANCEL(s, t) \
+        if (s && (!cancel) && (t)) { cancel = true ; }
 
-    DO(cmd,   KERR(k),             return false)
-    DO(cmd,   CODE(KEY_RESIZE),    reshape(root, 0, 0, LINES, COLS); SB)
-    DO(false, KEY(commandkey),     return cmd = true)
-    DO(false, KEY(0),              SENDN(n, "\000", 1); SB)
-    DO(false, KEY(L'\n'),          SEND(n, "\n"); SB)
-    DO(false, KEY(L'\r'),          SEND(n, n->lnm? "\r\n" : "\r"); SB)
-    DO(false, SCROLLUP && INSCR,   scrollback(n))
-    DO(false, SCROLLDOWN && INSCR, scrollforward(n))
-    DO(false, RECENTER && INSCR,   scrollbottom(n))
-    DO(false, CODE(KEY_ENTER),     SEND(n, n->lnm? "\r\n" : "\r"); SB)
-    DO(false, CODE(KEY_UP),        sendarrow(n, "A"); SB);
-    DO(false, CODE(KEY_DOWN),      sendarrow(n, "B"); SB);
-    DO(false, CODE(KEY_RIGHT),     sendarrow(n, "C"); SB);
-    DO(false, CODE(KEY_LEFT),      sendarrow(n, "D"); SB);
-    DO(false, CODE(KEY_HOME),      SEND(n, "\033[1~"); SB)
-    DO(false, CODE(KEY_END),       SEND(n, "\033[4~"); SB)
-    DO(false, CODE(KEY_PPAGE),     SEND(n, "\033[5~"); SB)
-    DO(false, CODE(KEY_NPAGE),     SEND(n, "\033[6~"); SB)
-    DO(false, CODE(KEY_BACKSPACE), SEND(n, "\177"); SB)
-    DO(false, CODE(KEY_DC),        SEND(n, "\033[3~"); SB)
-    DO(false, CODE(KEY_IC),        SEND(n, "\033[2~"); SB)
-    DO(false, CODE(KEY_BTAB),      SEND(n, "\033[Z"); SB)
-    DO(false, CODE(KEY_F(1)),      SEND(n, "\033OP"); SB)
-    DO(false, CODE(KEY_F(2)),      SEND(n, "\033OQ"); SB)
-    DO(false, CODE(KEY_F(3)),      SEND(n, "\033OR"); SB)
-    DO(false, CODE(KEY_F(4)),      SEND(n, "\033OS"); SB)
-    DO(false, CODE(KEY_F(5)),      SEND(n, "\033[15~"); SB)
-    DO(false, CODE(KEY_F(6)),      SEND(n, "\033[17~"); SB)
-    DO(false, CODE(KEY_F(7)),      SEND(n, "\033[18~"); SB)
-    DO(false, CODE(KEY_F(8)),      SEND(n, "\033[19~"); SB)
-    DO(false, CODE(KEY_F(9)),      SEND(n, "\033[20~"); SB)
-    DO(false, CODE(KEY_F(10)),     SEND(n, "\033[21~"); SB)
-    DO(false, CODE(KEY_F(11)),     SEND(n, "\033[23~"); SB)
-    DO(false, CODE(KEY_F(12)),     SEND(n, "\033[24~"); SB)
-    DO(true,  MOVE_UP,             focus(findnode(root, ABOVE(n))))
-    DO(true,  MOVE_DOWN,           focus(findnode(root, BELOW(n))))
-    DO(true,  MOVE_LEFT,           focus(findnode(root, LEFT(n))))
-    DO(true,  MOVE_RIGHT,          focus(findnode(root, RIGHT(n))))
-    DO(true,  MOVE_OTHER,          focus(lastfocused))
-    DO(true,  HSPLIT,              split(n, HORIZONTAL))
-    DO(true,  VSPLIT,              split(n, VERTICAL))
-    DO(true,  DELETE_NODE,         deletenode(n))
-    DO(true,  BAILOUT,             (void)1)
-    DO(true,  NUKE,                wclear(n->s->win))
-    DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
-    DO(true,  SCROLLUP,            scrollback(n))
-    DO(true,  SCROLLDOWN,          scrollforward(n))
-    DO(true,  RECENTER,            scrollbottom(n))
-    DO(true,  KEY(commandkey),     SENDN(n, cmdstr, 1));
+    // ESCAPE is the same code (27) as ALT.
+    // If we receive ALT+<KEY> in sequence (pressed together), an alt-command will be triggered.
+    // If they weren't pressed together, the key is passed onto the terminal after a very small delay.
+    // Hence, the first check here is a short-circuit case -
+    //  1. We have received an ALT/ESC, and entered alt-command mode. 
+    //  2. Then, we read a keyerror. cancel is set true.
+    //  3. The key codes are passed onto the terminal.
+    CANCEL(altcmd, KERR(0) )
+    DO(cmd,   KERR(k),              return false)
+    DO(cmd,   CODE(KEY_RESIZE),     reshape(root, 0, 0, LINES, COLS); SB)
+    DO(false, KEY(commandkey),      return cmd = true)
+    DO(false, KEY(0),               SENDN(n, "\000", 1); SB)
+    DO(false, KEY(L'\n'),           SEND(n, "\n"); SB)
+    DO(false, KEY(L'\r'),           SEND(n, n->lnm? "\r\n" : "\r"); SB)
+    DO(false, SCROLLUP && INSCR,    scrollback(n))
+    DO(false, SCROLLDOWN && INSCR,  scrollforward(n))
+    DO(false, RECENTER && INSCR,    scrollbottom(n))
+    DO(false, CODE(KEY_ENTER),      SEND(n, n->lnm? "\r\n" : "\r"); SB)
+    DO(false, CODE(KEY_UP),         sendarrow(n, "A"); SB);
+    DO(false, CODE(KEY_DOWN),       sendarrow(n, "B"); SB);
+    DO(false, CODE(KEY_RIGHT),      sendarrow(n, "C"); SB);
+    DO(false, CODE(KEY_LEFT),       sendarrow(n, "D"); SB);
+    DO(false, CODE(KEY_HOME),       SEND(n, "\033[1~"); SB)
+    DO(false, CODE(KEY_END),        SEND(n, "\033[4~"); SB)
+    DO(false, CODE(KEY_PPAGE),      SEND(n, "\033[5~"); SB)
+    DO(false, CODE(KEY_NPAGE),      SEND(n, "\033[6~"); SB)
+    DO(false, CODE(KEY_BACKSPACE),  SEND(n, "\177"); SB)
+    DO(false, CODE(KEY_DC),         SEND(n, "\033[3~"); SB)
+    DO(false, CODE(KEY_IC),         SEND(n, "\033[2~"); SB)
+    DO(false, CODE(KEY_BTAB),       SEND(n, "\033[Z"); SB)
+    DO(false, CODE(KEY_F(1)),       SEND(n, "\033OP"); SB)
+    DO(false, CODE(KEY_F(2)),       SEND(n, "\033OQ"); SB)
+    DO(false, CODE(KEY_F(3)),       SEND(n, "\033OR"); SB)
+    DO(false, CODE(KEY_F(4)),       SEND(n, "\033OS"); SB)
+    DO(false, CODE(KEY_F(5)),       SEND(n, "\033[15~"); SB)
+    DO(false, CODE(KEY_F(6)),       SEND(n, "\033[17~"); SB)
+    DO(false, CODE(KEY_F(7)),       SEND(n, "\033[18~"); SB)
+    DO(false, CODE(KEY_F(8)),       SEND(n, "\033[19~"); SB)
+    DO(false, CODE(KEY_F(9)),       SEND(n, "\033[20~"); SB)
+    DO(false, CODE(KEY_F(10)),      SEND(n, "\033[21~"); SB)
+    DO(false, CODE(KEY_F(11)),      SEND(n, "\033[23~"); SB)
+    DO(false, CODE(KEY_F(12)),      SEND(n, "\033[24~"); SB)
+    DO(true,  MOVE_UP,              focus(findnode(root, ABOVE(n))))
+    DO(true,  MOVE_DOWN,            focus(findnode(root, BELOW(n))))
+    DO(true,  MOVE_LEFT,            focus(findnode(root, LEFT(n))))
+    DO(true,  MOVE_RIGHT,           focus(findnode(root, RIGHT(n))))
+    DO(true,  MOVE_OTHER,           focus(lastfocused))
+    DO(true,  HSPLIT,               split(n, HORIZONTAL))
+    DO(true,  VSPLIT,               split(n, VERTICAL))
+    DO(true,  DELETE_NODE,          deletenode(n))
+    DO(true,  BAILOUT,              (void)1)
+    DO(true,  NUKE,                 wclear(n->s->win))
+    DO(true,  REDRAW,               touchwin(stdscr); draw(root); redrawwin(stdscr))
+    DO(true,  SCROLLUP,             scrollback(n))
+    DO(true,  SCROLLDOWN,           scrollforward(n))
+    DO(true,  RECENTER,             scrollbottom(n))
+    DO(true,  KEY(commandkey),      SENDN(n, cmdstr, 1));
+
+    DOALT(false, KEY(ALT_COMMAND_KEY), return altcmd = true)
+    DOALT(true,  ALT_MOVE_UP,          focus(findnode(root, ABOVE(n))))
+    DOALT(true,  ALT_MOVE_DOWN,        focus(findnode(root, BELOW(n))))
+    DOALT(true,  ALT_MOVE_LEFT,        focus(findnode(root, LEFT(n))))
+    DOALT(true,  ALT_MOVE_RIGHT,       focus(findnode(root, RIGHT(n))))
+    DOALT(true,  ALT_MOVE_OTHER,       focus(lastfocused));
+
     char c[MB_LEN_MAX + 1] = {0};
+
     if (wctomb(c, k) > 0){
         scrollbottom(n);
         SEND(n, c);
     }
-    return cmd = false, true;
+
+    altcmd = false;
+    cmd = false;
+
+    if (cancel) {
+        // Command was cancelled/pre-empted.
+        // The user probably wishes to send 
+        // a regular escape char!
+        // TODO! This conversion check probably isn't needed?
+        if (wctomb(c, ALT_COMMAND_KEY) > 0) {
+          SEND(n, c);
+        }
+
+        return cancel = false, false;
+    }
+    
+    return true;
 }
 
 static void
@@ -1126,8 +1165,14 @@ run(void) /* Run MTM. */
             FD_ZERO(&sfds);
 
         int r = wget_wch(focused->s->win, &w);
-        while (handlechar(r, w))
+
+        // While the handlechar function returns true, 
+        // we will keep feeding it with more inputs.
+        // This allows for sequential-key commands to be handled.
+        while (handlechar(r, w)){
             r = wget_wch(focused->s->win, &w);
+        }
+
         getinput(root, &sfds);
 
         draw(root);
