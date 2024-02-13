@@ -30,7 +30,7 @@
  * to follow after the escape key is pressed before sending it on to
  * the focused virtual terminal.
  */
-#define ESCAPE_TIME 500
+#define ESCAPE_TIME 50
 
 /* mtm supports a scrollback buffer, allowing users to scroll back
  * through the output history of a virtual terminal. The SCROLLBACK
@@ -55,6 +55,17 @@
 #define MOVE_RIGHT      CODE(KEY_RIGHT)
 #define MOVE_LEFT       CODE(KEY_LEFT)
 #define MOVE_OTHER      KEY(L'o')
+
+/* VI-style movement, for use with ALT-<KEY>.
+   ALT+<KEY> must be HELD DOWN while pressing the movement key.
+   This is how we can identify it from an ESCAPE press.
+ */
+#define ALT_COMMAND_KEY     27
+#define ALT_MOVE_UP         KEY(L'k')
+#define ALT_MOVE_DOWN       KEY(L'j')
+#define ALT_MOVE_RIGHT      KEY(L'l')
+#define ALT_MOVE_LEFT       KEY(L'h')
+#define ALT_MOVE_OTHER      KEY(L'o')
 
 /* The split terminal keys. */
 #define HSPLIT KEY(L'h')
