@@ -89,7 +89,7 @@
 
 /* Includes needed to make forkpty(3) work. */
 #ifndef FORKPTY_INCLUDE_H
-    #if defined(__APPLE__) || defined(__OpenBSD__)
+    #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__NetBSD__)
         #define FORKPTY_INCLUDE_H <util.h>
     #elif defined(__FreeBSD__)
         #define FORKPTY_INCLUDE_H <libutil.h>
