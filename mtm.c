@@ -1102,7 +1102,7 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(n))
     DO(true,  BAILOUT,             (void)1)
-    DO(true,  NUKE,                wclear(n->s->win))
+    DO(true,  NUKE,                wclear(n->s->win); SB)
     DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
     DO(true,  SCROLLUP,            scrollback(n))
     DO(true,  SCROLLDOWN,          scrollforward(n))
