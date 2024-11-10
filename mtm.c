@@ -1061,6 +1061,7 @@ handlechar(int r, int k) /* Handle a single input character. */
 
     DO(cmd,   KERR(k),             return false)
     DO(cmd,   CODE(KEY_RESIZE),    reshape(root, 0, 0, LINES, COLS); SB)
+
     DO(false, KEY(commandkey),     return cmd = true)
     DO(false, KEY(0),              SENDN(n, "\000", 1); SB)
     DO(false, KEY(L'\n'),          SEND(n, "\n"); SB)
@@ -1069,10 +1070,10 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(false, SCROLLDOWN && INSCR, scrollforward(n))
     DO(false, RECENTER && INSCR,   scrollbottom(n))
     DO(false, CODE(KEY_ENTER),     SEND(n, n->lnm? "\r\n" : "\r"); SB)
-    DO(false, CODE(KEY_UP),        sendarrow(n, "A"); SB);
-    DO(false, CODE(KEY_DOWN),      sendarrow(n, "B"); SB);
-    DO(false, CODE(KEY_RIGHT),     sendarrow(n, "C"); SB);
-    DO(false, CODE(KEY_LEFT),      sendarrow(n, "D"); SB);
+    DO(false, CODE(KEY_UP),        sendarrow(n, "A"); SB)
+    DO(false, CODE(KEY_DOWN),      sendarrow(n, "B"); SB)
+    DO(false, CODE(KEY_RIGHT),     sendarrow(n, "C"); SB)
+    DO(false, CODE(KEY_LEFT),      sendarrow(n, "D"); SB)
     DO(false, CODE(KEY_HOME),      SEND(n, "\033[1~"); SB)
     DO(false, CODE(KEY_END),       SEND(n, "\033[4~"); SB)
     DO(false, CODE(KEY_PPAGE),     SEND(n, "\033[5~"); SB)
@@ -1093,6 +1094,8 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(false, CODE(KEY_F(10)),     SEND(n, "\033[21~"); SB)
     DO(false, CODE(KEY_F(11)),     SEND(n, "\033[23~"); SB)
     DO(false, CODE(KEY_F(12)),     SEND(n, "\033[24~"); SB)
+    DO(false, r == KEY_CODE_YES,   (void)1)
+
     DO(true,  MOVE_UP,             focus(findnode(root, ABOVE(n))))
     DO(true,  MOVE_DOWN,           focus(findnode(root, BELOW(n))))
     DO(true,  MOVE_LEFT,           focus(findnode(root, LEFT(n))))
@@ -1101,19 +1104,20 @@ handlechar(int r, int k) /* Handle a single input character. */
     DO(true,  HSPLIT,              split(n, HORIZONTAL))
     DO(true,  VSPLIT,              split(n, VERTICAL))
     DO(true,  DELETE_NODE,         deletenode(n))
-    DO(true,  BAILOUT,             (void)1)
     DO(true,  NUKE,                wclear(n->s->win))
     DO(true,  REDRAW,              touchwin(stdscr); draw(root); redrawwin(stdscr))
     DO(true,  SCROLLUP,            scrollback(n))
     DO(true,  SCROLLDOWN,          scrollforward(n))
     DO(true,  RECENTER,            scrollbottom(n))
-    DO(true,  KEY(commandkey),     SENDN(n, cmdstr, 1));
+    DO(true,  KEY(commandkey),     SENDN(n, cmdstr, 1))
+    DO(true,  true,                (void)1)
+
     char c[MB_LEN_MAX + 1] = {0};
     if (wctomb(c, k) > 0){
         scrollbottom(n);
         SEND(n, c);
     }
-    return cmd = false, true;
+    cmd = false; return true;
 }
 
 static void
