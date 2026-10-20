@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux-arm64:
+    # Native arm64 runner: no cross-compiling or emulation needed.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build inside Alpine (musl) so the binary is fully static and runs on
+      # any arm64 Linux, regardless of glibc or ncurses versions.
+      - name: Build static binary
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -euxc '
+            apk add --no-cache build-base ncurses-dev ncurses-static
+            cp -f config.def.h config.h
+            make clean
+            make CFLAGS="-std=c99 -Wall -Wextra -pedantic -Os" LDFLAGS=-static \
+              CC="gcc -static"
+          '
+
+      - name: Verify and package
+        run: |
+          file mtm
+          file mtm | grep -q "statically linked"
+          file mtm | grep -q "ARM aarch64"
+          mkdir dist
+          cp mtm dist/mtm-linux-arm64
+          cd dist
+          sha256sum mtm-linux-arm64 > mtm-linux-arm64.sha256
+          cat mtm-linux-arm64.sha256
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" --generate-notes \
+          || gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          name: mtm-linux-arm64
+          path: dist/*
